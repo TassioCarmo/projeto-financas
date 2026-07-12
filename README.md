@@ -40,7 +40,13 @@ copy .env.example .env
 docker compose up -d
 ```
 
-6. Inicie a aplicação:
+6. Aplique as migrations do banco:
+
+```bash
+python migrate.py
+```
+
+7. Inicie a aplicação:
 
 ```bash
 python run.py
@@ -65,7 +71,11 @@ Resposta esperada (200):
 ## Testes
 
 ```bash
-pytest tests/
+# Unitários (não exigem Postgres)
+pytest tests/test_health.py
+
+# Integração (exige docker compose up)
+pytest -m integration
 ```
 
 ## Estrutura do projeto
@@ -77,4 +87,10 @@ app/
 ├── sql/         # Migrations SQL numeradas
 └── templates/   # Templates Jinja2
 tests/           # Testes automatizados
+docs/            # Documentação por fase
 ```
+
+## Documentação
+
+- [Fase 0 — Setup do Projeto](docs/fase-0.md)
+- [Fase 1 — Banco de dados mínimo](docs/fase-1.md)
