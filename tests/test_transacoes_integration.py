@@ -71,6 +71,88 @@ def _obter_categoria_id():
         conn.close()
 
 
+def _obter_categoria_por_nome(nome: str):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id FROM categorias WHERE nome = %s AND ativa = TRUE",
+                (nome,),
+            )
+            return cur.fetchone()[0]
+    finally:
+        conn.close()
+
+
+def _cadastrar_transacao(client, data_compra, descricao, categoria_id, valor, pago=False):
+    client.post(
+        "/transacoes",
+        data={
+            "data_compra": data_compra,
+            "descricao": descricao,
+            "categoria_id": str(categoria_id),
+            "valor": str(valor),
+            "pago": "true" if pago else "",
+        },
+        follow_redirects=True,
+    )
+
+
+def test_filtros_listagem(client):
+    _cadastrar_e_logar(client, NOME_A, EMAIL_A)
+    cat_alimentacao = _obter_categoria_por_nome("Alimentação")
+    cat_transporte = _obter_categoria_por_nome("Transporte")
+
+    # jul/2026 pago (Alimentação)
+    _cadastrar_transacao(
+        client, "2026-07-10", "Supermercado jul pago", cat_alimentacao, "100.00", pago=True
+    )
+    # jul/2026 não pago (Transporte)
+    _cadastrar_transacao(
+        client, "2026-07-15", "Uber jul nao pago", cat_transporte, "50.00", pago=False
+    )
+    # jun/2026 pago (Alimentação)
+    _cadastrar_transacao(
+        client, "2026-06-20", "Mercado jun pago", cat_alimentacao, "80.00", pago=True
+    )
+
+    # Sem filtros: 3 transações
+    response = client.get("/transacoes")
+    assert response.status_code == 200
+    assert b"Supermercado jul pago" in response.data
+    assert b"Uber jul nao pago" in response.data
+    assert b"Mercado jun pago" in response.data
+
+    # Filtro por intervalo de datas (julho)
+    response = client.get("/transacoes?data_inicio=2026-07-01&data_fim=2026-07-31")
+    assert b"Supermercado jul pago" in response.data
+    assert b"Uber jul nao pago" in response.data
+    assert b"Mercado jun pago" not in response.data
+
+    # Filtro por pago = true
+    response = client.get("/transacoes?pago=true")
+    assert b"Supermercado jul pago" in response.data
+    assert b"Mercado jun pago" in response.data
+    assert b"Uber jul nao pago" not in response.data
+
+    # Combinação: categoria + pago=false
+    response = client.get(
+        f"/transacoes?categoria_id={cat_transporte}&pago=false"
+    )
+    assert b"Uber jul nao pago" in response.data
+    assert b"Supermercado jul pago" not in response.data
+    assert b"Mercado jun pago" not in response.data
+
+    # JSON com filtros
+    response = client.get(
+        "/transacoes?data_inicio=2026-07-01&data_fim=2026-07-31&pago=true",
+        headers={"Accept": "application/json"},
+    )
+    data = response.get_json()
+    assert len(data) == 1
+    assert data[0]["descricao"] == "Supermercado jul pago"
+
+
 def test_fluxo_completo_transacoes(client):
     _cadastrar_e_logar(client, NOME_A, EMAIL_A)
     categoria_id = _obter_categoria_id()

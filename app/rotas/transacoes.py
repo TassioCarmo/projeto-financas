@@ -4,6 +4,7 @@ from decimal import Decimal, InvalidOperation
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
 from app.servicos.auth import usuario_logado
+from app.servicos.categorias import categoria_ativa_existe
 from app.servicos.importacao import importar_transacoes
 from app.servicos.transacoes import (
     CategoriaInvalidaError,
@@ -101,12 +102,103 @@ def _requer_login():
     return None, redirect(url_for("auth.login"))
 
 
+def _extrair_filtros_query() -> dict:
+    """Lê os parâmetros de filtro da URL (?data_inicio=...&categoria_id=...)."""
+    return {
+        "data_inicio": request.args.get("data_inicio", "").strip(),
+        "data_fim": request.args.get("data_fim", "").strip(),
+        "categoria_id": request.args.get("categoria_id", "").strip(),
+        "pago": request.args.get("pago", "").strip(),
+    }
+
+
+def _filtros_ativos(filtros_raw: dict) -> bool:
+    """Verifica se o usuário aplicou algum filtro na listagem."""
+    return any(filtros_raw.get(k) for k in ("data_inicio", "data_fim", "categoria_id", "pago"))
+
+
+def _validar_filtros(dados: dict) -> tuple[dict, str | None]:
+    """
+    Valida filtros da query string antes de consultar o banco.
+
+    Retorna (filtros_validados, None) ou ({}, mensagem_erro).
+    Campos vazios são ignorados (não entram no filtro).
+    """
+    filtros: dict = {}
+
+    # Intervalo de datas
+    data_inicio = None
+    data_fim = None
+
+    if dados["data_inicio"]:
+        try:
+            data_inicio = datetime.strptime(dados["data_inicio"], "%Y-%m-%d").date()
+        except ValueError:
+            return {}, "Data início inválida."
+
+    if dados["data_fim"]:
+        try:
+            data_fim = datetime.strptime(dados["data_fim"], "%Y-%m-%d").date()
+        except ValueError:
+            return {}, "Data fim inválida."
+
+    if data_inicio and data_fim and data_inicio > data_fim:
+        return {}, "Data início não pode ser maior que data fim."
+
+    if data_inicio:
+        filtros["data_inicio"] = data_inicio
+    if data_fim:
+        filtros["data_fim"] = data_fim
+
+    # Categoria (opcional)
+    if dados["categoria_id"]:
+        try:
+            categoria_id = int(dados["categoria_id"])
+        except ValueError:
+            return {}, "Categoria inválida."
+        if not categoria_ativa_existe(categoria_id):
+            return {}, "Categoria inválida."
+        filtros["categoria_id"] = categoria_id
+
+    # Pago: true / false / vazio (todos)
+    if dados["pago"]:
+        if dados["pago"].lower() not in ("true", "false"):
+            return {}, "Filtro pago inválido. Use true ou false."
+        filtros["pago"] = dados["pago"].lower() == "true"
+
+    return filtros, None
+
+
+def _serializar_transacao(t: dict) -> dict:
+    """Converte tipos do banco para JSON serializável."""
+    return {
+        **t,
+        "data_compra": t["data_compra"].isoformat() if t["data_compra"] else None,
+        "valor": float(t["valor"]),
+        "criado_em": t["criado_em"].isoformat() if t["criado_em"] else None,
+        "atualizado_em": t["atualizado_em"].isoformat() if t["atualizado_em"] else None,
+    }
+
+
 @transacoes_bp.route("/transacoes", methods=["GET"])
 def listar():
     usuario, erro = _requer_login()
     if erro:
         return erro
-    transacoes = listar_por_usuario(usuario["id"])
+
+    filtros_raw = _extrair_filtros_query()
+    filtros, msg_erro = _validar_filtros(filtros_raw)
+    if msg_erro:
+        if _wants_json():
+            return jsonify({"erro": msg_erro}), 400
+        flash(msg_erro, "erro")
+        filtros = {}
+
+    transacoes = listar_por_usuario(usuario["id"], **filtros)
+
+    if _wants_json():
+        return jsonify([_serializar_transacao(t) for t in transacoes])
+
     # Recupera resultado da última importação (se houver) e remove da session
     # para não reaparecer ao recarregar a página depois
     resultado_importacao = session.pop("ultima_importacao", None)
@@ -114,6 +206,8 @@ def listar():
         "transacoes/listar.html",
         transacoes=transacoes,
         resultado_importacao=resultado_importacao,
+        filtros=filtros_raw,
+        filtros_ativos=_filtros_ativos(filtros_raw),
     )
 
 

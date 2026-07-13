@@ -82,23 +82,51 @@ def criar_transacao(
         conn.close()
 
 
-def listar_por_usuario(usuario_id: str) -> list[dict]:
+def listar_por_usuario(
+    usuario_id: str,
+    data_inicio: date | None = None,
+    data_fim: date | None = None,
+    categoria_id: int | None = None,
+    pago: bool | None = None,
+) -> list[dict]:
+    """
+    Lista transações do usuário, com filtros opcionais.
+
+    Se nenhum filtro for informado, retorna todas (comportamento da Fase 3).
+    Filtros combinados usam AND — ex.: data + categoria + pago juntos.
+    """
+    # Monta WHERE dinamicamente: sempre filtra por usuario_id
+    where = ["t.usuario_id = %s"]
+    params: list = [usuario_id]
+
+    if data_inicio is not None:
+        where.append("t.data_compra >= %s")
+        params.append(data_inicio)
+    if data_fim is not None:
+        where.append("t.data_compra <= %s")
+        params.append(data_fim)
+    if categoria_id is not None:
+        where.append("t.categoria_id = %s")
+        params.append(categoria_id)
+    if pago is not None:
+        where.append("t.pago = %s")
+        params.append(pago)
+
+    sql = f"""
+        SELECT
+            t.id, t.data_compra, t.descricao, t.categoria_id, c.nome,
+            t.valor, t.pago, t.pago_por_terceiro, t.nome_terceiro,
+            t.origem, t.criado_em, t.atualizado_em
+        FROM transacoes t
+        JOIN categorias c ON c.id = t.categoria_id
+        WHERE {' AND '.join(where)}
+        ORDER BY t.data_compra DESC, t.id DESC
+    """
+
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT
-                    t.id, t.data_compra, t.descricao, t.categoria_id, c.nome,
-                    t.valor, t.pago, t.pago_por_terceiro, t.nome_terceiro,
-                    t.origem, t.criado_em, t.atualizado_em
-                FROM transacoes t
-                JOIN categorias c ON c.id = t.categoria_id
-                WHERE t.usuario_id = %s
-                ORDER BY t.data_compra DESC, t.id DESC
-                """,
-                (usuario_id,),
-            )
+            cur.execute(sql, params)
             return [_row_to_dict(row) for row in cur.fetchall()]
     finally:
         conn.close()

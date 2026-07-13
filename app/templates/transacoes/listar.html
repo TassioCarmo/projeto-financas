@@ -105,6 +105,41 @@
 </div>
 {% endif %}
 
+{# --- Filtros da listagem (GET) --- #}
+<h2>Filtrar transações</h2>
+<form method="GET" action="{{ url_for('transacoes.listar') }}" style="margin-bottom: 2rem;">
+    <div class="form-grid">
+        <div>
+            <label for="filtro_data_inicio">Data início</label>
+            <input type="date" id="filtro_data_inicio" name="data_inicio"
+                   value="{{ filtros.data_inicio if filtros else '' }}">
+        </div>
+        <div>
+            <label for="filtro_data_fim">Data fim</label>
+            <input type="date" id="filtro_data_fim" name="data_fim"
+                   value="{{ filtros.data_fim if filtros else '' }}">
+        </div>
+    </div>
+    <div class="form-grid">
+        <div>
+            <label for="filtro_categoria_id">Categoria</label>
+            <select id="filtro_categoria_id" name="categoria_id">
+                <option value="">Todas</option>
+            </select>
+        </div>
+        <div>
+            <label for="filtro_pago">Pago</label>
+            <select id="filtro_pago" name="pago">
+                <option value="" {% if not filtros or not filtros.pago %}selected{% endif %}>Todos</option>
+                <option value="true" {% if filtros and filtros.pago == 'true' %}selected{% endif %}>Sim</option>
+                <option value="false" {% if filtros and filtros.pago == 'false' %}selected{% endif %}>Não</option>
+            </select>
+        </div>
+    </div>
+    <button type="submit">Filtrar</button>
+    <a href="{{ url_for('transacoes.listar') }}" style="margin-left: 1rem;">Limpar filtros</a>
+</form>
+
 <h2>Minhas transações</h2>
 {% if transacoes %}
 <table>
@@ -188,7 +223,13 @@
     </tbody>
 </table>
 {% else %}
-<p>Nenhuma transação cadastrada.</p>
+<p>
+    {% if filtros_ativos %}
+        Nenhuma transação encontrada com os filtros aplicados.
+    {% else %}
+        Nenhuma transação cadastrada.
+    {% endif %}
+</p>
 {% endif %}
 {% endblock %}
 
@@ -196,8 +237,11 @@
 <script>
 let categorias = [];
 
-function popularSelect(select, selectedId) {
-    select.innerHTML = '<option value="">Selecione...</option>';
+function popularSelect(select, selectedId, manterTodas = false) {
+    const primeiraOpcao = manterTodas
+        ? '<option value="">Todas</option>'
+        : '<option value="">Selecione...</option>';
+    select.innerHTML = primeiraOpcao;
     categorias.forEach(cat => {
         const opt = document.createElement('option');
         opt.value = cat.id;
@@ -226,6 +270,12 @@ async function carregarCategorias() {
     if (cadastroSelect) {
         const selected = '{{ form.categoria_id if form else "" }}';
         popularSelect(cadastroSelect, selected);
+    }
+
+    const filtroSelect = document.getElementById('filtro_categoria_id');
+    if (filtroSelect) {
+        const selectedFiltro = '{{ filtros.categoria_id if filtros else "" }}';
+        popularSelect(filtroSelect, selectedFiltro, true);
     }
 
     document.querySelectorAll('.select-categoria').forEach(select => {

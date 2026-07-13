@@ -52,6 +52,75 @@ def test_listar_com_sessao(mock_listar, client, usuario_logado):
     mock_listar.assert_called_once_with(usuario_logado["id"])
 
 
+@patch("app.rotas.transacoes.listar_por_usuario", return_value=[])
+def test_listar_com_filtros(mock_listar, client, usuario_logado):
+    response = client.get(
+        "/transacoes?data_inicio=2026-07-01&data_fim=2026-07-31&categoria_id=1&pago=true"
+    )
+    assert response.status_code == 200
+    mock_listar.assert_called_once()
+    kwargs = mock_listar.call_args.kwargs
+    assert kwargs["data_inicio"].isoformat() == "2026-07-01"
+    assert kwargs["data_fim"].isoformat() == "2026-07-31"
+    assert kwargs["categoria_id"] == 1
+    assert kwargs["pago"] is True
+
+
+@patch("app.rotas.transacoes.listar_por_usuario", return_value=[])
+def test_listar_filtro_data_invalida(mock_listar, client, usuario_logado):
+    response = client.get("/transacoes?data_inicio=2026-13-01")
+    assert response.status_code == 200
+    mock_listar.assert_called_once_with(usuario_logado["id"])
+
+
+@patch("app.rotas.transacoes.listar_por_usuario", return_value=[])
+def test_listar_filtro_intervalo_invertido(mock_listar, client, usuario_logado):
+    response = client.get(
+        "/transacoes?data_inicio=2026-07-31&data_fim=2026-07-01"
+    )
+    assert response.status_code == 200
+    mock_listar.assert_called_once_with(usuario_logado["id"])
+
+
+@patch("app.rotas.transacoes.categoria_ativa_existe", return_value=False)
+@patch("app.rotas.transacoes.listar_por_usuario", return_value=[])
+def test_listar_filtro_categoria_invalida(mock_listar, mock_categoria, client, usuario_logado):
+    response = client.get("/transacoes?categoria_id=99999")
+    assert response.status_code == 200
+    mock_listar.assert_called_once_with(usuario_logado["id"])
+
+
+@patch("app.rotas.transacoes.listar_por_usuario", return_value=[])
+def test_listar_json_com_filtros(mock_listar, client, usuario_logado):
+    from datetime import date
+    from decimal import Decimal
+
+    mock_listar.return_value = [
+        {
+            "id": 1,
+            "data_compra": date(2026, 7, 13),
+            "descricao": "Almoço",
+            "categoria_id": 1,
+            "categoria_nome": "Alimentação",
+            "valor": Decimal("45.90"),
+            "pago": True,
+            "pago_por_terceiro": False,
+            "nome_terceiro": None,
+            "origem": "manual",
+            "criado_em": None,
+            "atualizado_em": None,
+        }
+    ]
+    response = client.get(
+        "/transacoes?pago=true",
+        headers={"Accept": "application/json"},
+    )
+    assert response.status_code == 200
+    data = response.get_json()
+    assert len(data) == 1
+    assert data[0]["pago"] is True
+
+
 @patch("app.rotas.categorias.listar_ativas", return_value=[{"id": 1, "nome": "Alimentação"}])
 def test_categorias_com_sessao(mock_listar, client, usuario_logado):
     response = client.get("/categorias")

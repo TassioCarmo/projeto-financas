@@ -84,7 +84,7 @@ Após login, a tela principal fica em:
 
 - Transações: `http://localhost:5000/transacoes`
 
-Cadastro manual de gastos e importação de planilha (`.csv` ou `.xlsx`) estão na mesma tela. Veja o formato esperado em [Fase 4 — Upload de planilha](docs/fase-4.md).
+Cadastro manual de gastos, importação de planilha (`.csv` ou `.xlsx`) e filtros por data, categoria e pago estão na mesma tela. Veja [Fase 3 — Cadastro manual](docs/fase-3.md), [Fase 4 — Upload de planilha](docs/fase-4.md) e [Fase 7 — Filtros](docs/fase-7.md).
 
 ## Resumo mensal
 
@@ -131,3 +131,4 @@ docs/            # Documentação por fase
 - [Fase 4 — Upload de planilha](docs/fase-4.md)
 - [Fase 5 — Dados mensais (resumo_mensal)](docs/fase-5.md)
 - [Fase 6 — Orçamentos por categoria](docs/fase-6.md)
+- [Fase 7 — Filtros na listagem de transações](docs/fase-7.md)
