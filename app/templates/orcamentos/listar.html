@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Orçamentos — Finanças{% endblock %}
+
+{% block content %}
+<nav class="nav">
+    <a href="{{ url_for('transacoes.listar') }}">Transações</a>
+    <a href="{{ url_for('resumo_mensal.listar') }}">Resumo mensal</a>
+    <a href="{{ url_for('orcamentos.listar') }}">Orçamentos</a>
+    <a href="{{ url_for('perfil.exibir') }}">Perfil</a>
+    <form method="POST" action="{{ url_for('auth.logout') }}" style="display:inline; margin:0;">
+        <button type="submit" style="margin-top:0;">Sair</button>
+    </form>
+</nav>
+
+<h1>Orçamentos</h1>
+<p class="hint">Defina quanto planeja gastar por categoria e acompanhe o uso no mês.</p>
+
+{# --- Filtro por mês (GET) --- #}
+<h2>Consultar mês</h2>
+<form method="GET" action="{{ url_for('orcamentos.listar') }}" style="margin-bottom: 2rem;">
+    <div class="form-grid">
+        <div>
+            <label for="filtro_ano_mes">Mês</label>
+            <input type="month" id="filtro_ano_mes" name="ano_mes"
+                   value="{{ ano_mes }}" required>
+            <p class="hint">Ex: julho/2026</p>
+        </div>
+        <div style="padding-top: 1.75rem;">
+            <button type="submit">Filtrar</button>
+        </div>
+    </div>
+</form>
+
+{# --- Formulário de cadastro/atualização (POST) --- #}
+<h2>Definir orçamento</h2>
+<p class="hint">Se categoria + mês já existir, o valor será atualizado (não duplica).</p>
+<form method="POST" action="{{ url_for('orcamentos.salvar') }}">
+    <div class="form-grid">
+        <div>
+            <label for="ano_mes">Mês</label>
+            <input type="month" id="ano_mes" name="ano_mes"
+                   value="{{ form.ano_mes if form else ano_mes }}" required>
+        </div>
+        <div>
+            <label for="categoria_id">Categoria</label>
+            <select id="categoria_id" name="categoria_id" required>
+                <option value="">Carregando...</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-grid">
+        <div>
+            <label for="valor_planejado">Valor planejado (R$)</label>
+            <input type="number" id="valor_planejado" name="valor_planejado"
+                   step="0.01" min="0"
+                   value="{{ form.valor_planejado if form else '' }}" required>
+            <p class="hint">Quanto você pretende gastar nesta categoria no mês</p>
+        </div>
+    </div>
+
+    <button type="submit">Salvar orçamento</button>
+</form>
+
+{# --- Tabela de status: planejado vs. gasto real --- #}
+<h2>Status de {{ ano_mes }}</h2>
+
+{% if status %}
+<table>
+    <thead>
+        <tr>
+            <th>Categoria</th>
+            <th>Planejado</th>
+            <th>Gasto real</th>
+            <th>% usado</th>
+            <th>Saldo</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in status %}
+        <tr>
+            <td>{{ s.categoria_nome }}</td>
+            <td>R$ {{ "%.2f"|format(s.valor_planejado) }}</td>
+            <td>R$ {{ "%.2f"|format(s.valor_gasto) }}</td>
+            <td>
+                {% if s.percentual_usado is not none %}
+                    {% if s.percentual_usado > 100 %}
+                        <span style="color: #c0392b; font-weight: bold;">
+                            {{ "%.1f"|format(s.percentual_usado) }}%
+                        </span>
+                    {% else %}
+                        {{ "%.1f"|format(s.percentual_usado) }}%
+                    {% endif %}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td>
+                {% if s.saldo_restante < 0 %}
+                    <span style="color: #c0392b;">
+                        R$ {{ "%.2f"|format(s.saldo_restante) }}
+                    </span>
+                {% else %}
+                    R$ {{ "%.2f"|format(s.saldo_restante) }}
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="hint">Nenhum orçamento definido para {{ ano_mes }}. Use o formulário acima.</p>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Carrega categorias ativas no select (mesmo padrão da tela de transações)
+    fetch('/categorias')
+        .then(resp => resp.json())
+        .then(categorias => {
+            const select = document.getElementById('categoria_id');
+            const valorSelecionado = '{{ form.categoria_id if form else "" }}';
+            select.innerHTML = '<option value="">Selecione...</option>';
+            categorias.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat.id;
+                opt.textContent = cat.nome;
+                if (String(cat.id) === valorSelecionado) {
+                    opt.selected = true;
+                }
+                select.appendChild(opt);
+            });
+        })
+        .catch(() => {
+            document.getElementById('categoria_id').innerHTML =
+                '<option value="">Erro ao carregar categorias</option>';
+        });
+</script>
+{% endblock %}

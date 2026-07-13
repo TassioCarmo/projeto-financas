@@ -72,7 +72,7 @@ Resposta esperada (200):
 
 ```bash
 # Unitários (não exigem Postgres)
-pytest tests/test_health.py tests/test_auth.py tests/test_transacoes.py tests/test_importacao.py tests/test_resumo_mensal.py
+pytest tests/test_health.py tests/test_auth.py tests/test_transacoes.py tests/test_importacao.py tests/test_resumo_mensal.py tests/test_orcamentos.py
 
 # Integração (exige docker compose up)
 pytest -m integration
@@ -93,6 +93,14 @@ Após login, acesse:
 - Resumo mensal: `http://localhost:5000/resumo-mensal?ano=2026`
 
 Registre renda, investimento, rendimentos e patrimônio mês a mês. Veja detalhes em [Fase 5 — Dados mensais](docs/fase-5.md).
+
+## Orçamentos
+
+Após login, acesse:
+
+- Orçamentos: `http://localhost:5000/orcamentos?ano_mes=2026-07`
+
+Defina quanto planeja gastar por categoria e acompanhe o uso no mês. Veja detalhes em [Fase 6 — Orçamentos por categoria](docs/fase-6.md).
 
 ## Autenticação
 
@@ -122,3 +130,4 @@ docs/            # Documentação por fase
 - [Fase 3 — Cadastro manual de transação](docs/fase-3.md)
 - [Fase 4 — Upload de planilha](docs/fase-4.md)
 - [Fase 5 — Dados mensais (resumo_mensal)](docs/fase-5.md)
+- [Fase 6 — Orçamentos por categoria](docs/fase-6.md)

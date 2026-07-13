@@ -6,6 +6,7 @@
 <nav class="nav">
     <a href="{{ url_for('transacoes.listar') }}">Transações</a>
     <a href="{{ url_for('resumo_mensal.listar') }}">Resumo mensal</a>
+    <a href="{{ url_for('orcamentos.listar') }}">Orçamentos</a>
     <a href="{{ url_for('perfil.exibir') }}">Perfil</a>
     <form method="POST" action="{{ url_for('auth.logout') }}" style="display:inline; margin:0;">
         <button type="submit" style="margin-top:0;">Sair</button>

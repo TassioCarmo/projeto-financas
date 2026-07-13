@@ -68,6 +68,7 @@ def test_tables_exist(migrated_db):
                 "categorias",
                 "transacoes",
                 "resumo_mensal",
+                "orcamentos",
                 "schema_migrations",
             ):
                 assert _table_exists(cur, table), f"Tabela {table} não encontrada"
@@ -119,6 +120,25 @@ def test_resumo_mensal_usuario_ano_index(migrated_db):
     try:
         with conn.cursor() as cur:
             assert _index_exists(cur, "idx_resumo_mensal_usuario_ano")
+    finally:
+        conn.close()
+
+
+def test_orcamentos_foreign_keys(migrated_db):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            assert _foreign_key_exists(cur, "orcamentos", "usuarios")
+            assert _foreign_key_exists(cur, "orcamentos", "categorias")
+    finally:
+        conn.close()
+
+
+def test_orcamentos_usuario_mes_index(migrated_db):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            assert _index_exists(cur, "idx_orcamentos_usuario_mes")
     finally:
         conn.close()
 
