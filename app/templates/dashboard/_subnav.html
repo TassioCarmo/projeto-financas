@@ -1,0 +1,12 @@
+<nav class="subnav">
+    <a href="{{ url_for('dashboard.visao_geral', ano_mes=ano_mes) }}"
+       {% if pagina_ativa == 'visao_geral' %}class="ativo"{% endif %}>Visão geral</a>
+    <a href="{{ url_for('dashboard.pagina_categorias', ano_mes=ano_mes) }}"
+       {% if pagina_ativa == 'categorias' %}class="ativo"{% endif %}>Categorias</a>
+    <a href="{{ url_for('dashboard.pagina_recorrencias', ano_mes=ano_mes) }}"
+       {% if pagina_ativa == 'recorrencias' %}class="ativo"{% endif %}>Recorrências</a>
+    <a href="{{ url_for('dashboard.pagina_orcamentos', ano_mes=ano_mes) }}"
+       {% if pagina_ativa == 'orcamentos' %}class="ativo"{% endif %}>Orçamentos</a>
+    <a href="{{ url_for('consultas.listar') }}"
+       {% if pagina_ativa == 'consultas' %}class="ativo"{% endif %}>Consultas</a>
+</nav>

@@ -1,0 +1,112 @@
+{% extends "dashboard/layout.html" %}
+
+{% block dashboard_title %}Visão geral{% endblock %}
+{% block dashboard_heading %}Visão geral{% endblock %}
+
+{% block dashboard_content %}
+<p class="hint">Fluxo de caixa do mês e evolução do patrimônio.</p>
+
+<div class="cards" id="cards-fluxo">
+    <div class="card"><div class="rotulo">Entrou</div><div class="valor" id="card-entrou">—</div></div>
+    <div class="card"><div class="rotulo">Saiu</div><div class="valor" id="card-saiu">—</div></div>
+    <div class="card"><div class="rotulo">Saldo</div><div class="valor" id="card-saldo">—</div></div>
+</div>
+
+<h2>Fluxo de caixa do mês</h2>
+<div class="chart-box"><canvas id="chart-fluxo"></canvas></div>
+<p id="vazio-fluxo" class="vazio hidden">Sem dados de fluxo para este mês.</p>
+
+<h2>Evolução do patrimônio</h2>
+<div class="chart-box"><canvas id="chart-patrimonio"></canvas></div>
+<p id="vazio-patrimonio" class="vazio hidden">Cadastre resumo mensal para ver a evolução do patrimônio.</p>
+{% endblock %}
+
+{% block dashboard_scripts %}
+<script>
+(function () {
+    const anoMes = '{{ ano_mes }}';
+    let chartFluxo = null;
+    let chartPatrimonio = null;
+
+    function renderFluxo(dados) {
+        const mes = dados.mes;
+        document.getElementById('card-entrou').textContent = formatarMoeda(mes.entrou);
+        document.getElementById('card-saiu').textContent = formatarMoeda(mes.saiu);
+        document.getElementById('card-saldo').textContent = formatarMoeda(mes.saldo);
+
+        const ctx = document.getElementById('chart-fluxo');
+        const vazio = document.getElementById('vazio-fluxo');
+        if (mes.entrou === 0 && mes.saiu === 0) {
+            ctx.classList.add('hidden');
+            vazio.classList.remove('hidden');
+            return;
+        }
+        ctx.classList.remove('hidden');
+        vazio.classList.add('hidden');
+        if (chartFluxo) chartFluxo.destroy();
+        chartFluxo = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Entrou', 'Saiu', 'Saldo'],
+                datasets: [{
+                    label: 'R$',
+                    data: [mes.entrou, mes.saiu, mes.saldo],
+                    backgroundColor: ['#4caf50', '#f44336', '#2196f3']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    function renderPatrimonio(dados) {
+        const serie = dados.serie || [];
+        const ctx = document.getElementById('chart-patrimonio');
+        const vazio = document.getElementById('vazio-patrimonio');
+        const comValor = serie.filter(function (p) { return p.patrimonio_efetivo != null; });
+        if (comValor.length === 0) {
+            ctx.classList.add('hidden');
+            vazio.classList.remove('hidden');
+            return;
+        }
+        ctx.classList.remove('hidden');
+        vazio.classList.add('hidden');
+        if (chartPatrimonio) chartPatrimonio.destroy();
+        chartPatrimonio = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: comValor.map(function (p) { return p.ano_mes; }),
+                datasets: [{
+                    label: 'Patrimônio',
+                    data: comValor.map(function (p) { return p.patrimonio_efetivo; }),
+                    borderColor: '#673ab7',
+                    backgroundColor: 'rgba(103, 58, 183, 0.1)',
+                    fill: true,
+                    tension: 0.2
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        esconderErro();
+        Promise.all([
+            fetchJson('/dashboard/fluxo-caixa?ano_mes=' + encodeURIComponent(anoMes)),
+            fetchJson('/dashboard/patrimonio')
+        ]).then(function (results) {
+            renderFluxo(results[0]);
+            renderPatrimonio(results[1]);
+        }).catch(function (err) {
+            mostrarErro(err.message);
+        });
+    });
+})();
+</script>
+{% endblock %}

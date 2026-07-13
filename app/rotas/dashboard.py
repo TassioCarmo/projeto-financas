@@ -12,7 +12,7 @@ import re
 from datetime import datetime
 from decimal import Decimal
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 
 from app.servicos.auth import usuario_logado
 from app.servicos.dashboard import (
@@ -31,6 +31,13 @@ def _requer_login():
     if usuario:
         return usuario, None
     return None, (jsonify({"erro": "Não autenticado."}), 401)
+
+
+def _requer_login_html():
+    usuario = usuario_logado()
+    if usuario:
+        return usuario, None
+    return None, redirect(url_for("auth.login"))
 
 
 def _mes_atual() -> str:
@@ -114,6 +121,52 @@ def _parse_ano_mes_request() -> tuple[str | None, tuple | None]:
     if msg_erro:
         return None, (jsonify({"erro": msg_erro}), 400)
     return ano_mes, None
+
+
+def _parse_ano_mes_html() -> str:
+    """Valida ano_mes para telas HTML; em erro usa mês atual e exibe flash."""
+    ano_mes, msg_erro = _parse_ano_mes(request.args.get("ano_mes"))
+    if msg_erro:
+        flash(msg_erro, "erro")
+        return _mes_atual()
+    return ano_mes
+
+
+def _render_dashboard(template: str, pagina_ativa: str):
+    ano_mes = _parse_ano_mes_html()
+    return render_template(template, ano_mes=ano_mes, pagina_ativa=pagina_ativa)
+
+
+@dashboard_bp.route("/dashboard", methods=["GET"])
+def visao_geral():
+    usuario, erro = _requer_login_html()
+    if erro:
+        return erro
+    return _render_dashboard("dashboard/visao_geral.html", pagina_ativa="visao_geral")
+
+
+@dashboard_bp.route("/dashboard/categorias", methods=["GET"])
+def pagina_categorias():
+    usuario, erro = _requer_login_html()
+    if erro:
+        return erro
+    return _render_dashboard("dashboard/categorias.html", pagina_ativa="categorias")
+
+
+@dashboard_bp.route("/dashboard/recorrencias", methods=["GET"])
+def pagina_recorrencias():
+    usuario, erro = _requer_login_html()
+    if erro:
+        return erro
+    return _render_dashboard("dashboard/recorrencias.html", pagina_ativa="recorrencias")
+
+
+@dashboard_bp.route("/dashboard/orcamentos", methods=["GET"])
+def pagina_orcamentos():
+    usuario, erro = _requer_login_html()
+    if erro:
+        return erro
+    return _render_dashboard("dashboard/orcamentos.html", pagina_ativa="orcamentos")
 
 
 @dashboard_bp.route("/dashboard/fluxo-caixa", methods=["GET"])

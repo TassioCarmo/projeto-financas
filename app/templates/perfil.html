@@ -8,6 +8,7 @@
 <p>Email: {{ usuario.email }}</p>
 <p class="links">
     <a href="{{ url_for('transacoes.listar') }}">Ver transações</a> |
+    <a href="{{ url_for('dashboard.visao_geral') }}">Dashboard</a> |
     <a href="{{ url_for('consultas.listar') }}">Consultas personalizadas</a>
 </p>
 <form method="POST" action="{{ url_for('auth.logout') }}">

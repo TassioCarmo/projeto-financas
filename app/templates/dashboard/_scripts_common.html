@@ -1,0 +1,57 @@
+<script>
+(function () {
+    const anoMesInicial = '{{ ano_mes }}';
+
+    window.fetchJson = function (url) {
+        return fetch(url, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        }).then(function (resp) {
+            if (resp.status === 401) {
+                window.location.href = '{{ url_for("auth.login") }}';
+                return Promise.reject(new Error('Não autenticado.'));
+            }
+            return resp.json().then(function (data) {
+                if (!resp.ok) {
+                    return Promise.reject(new Error(data.erro || 'Erro ao carregar dados.'));
+                }
+                return data;
+            });
+        });
+    };
+
+    window.formatarMoeda = function (valor) {
+        return 'R$ ' + Number(valor).toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    };
+
+    window.montarUrlComMes = function (path, anoMes) {
+        const sep = path.indexOf('?') >= 0 ? '&' : '?';
+        return path + sep + 'ano_mes=' + encodeURIComponent(anoMes);
+    };
+
+    window.mostrarErro = function (mensagem) {
+        const el = document.getElementById('erro-api');
+        if (!el) return;
+        el.textContent = mensagem;
+        el.classList.remove('hidden');
+    };
+
+    window.esconderErro = function () {
+        const el = document.getElementById('erro-api');
+        if (el) el.classList.add('hidden');
+    };
+
+    const filtroMes = document.getElementById('filtro_ano_mes');
+    if (filtroMes) {
+        filtroMes.addEventListener('change', function () {
+            if (!filtroMes.value) return;
+            const params = new URLSearchParams(window.location.search);
+            params.set('ano_mes', filtroMes.value);
+            window.location.search = params.toString();
+        });
+    }
+})();
+</script>

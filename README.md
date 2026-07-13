@@ -72,7 +72,7 @@ Resposta esperada (200):
 
 ```bash
 # Unitários (não exigem Postgres)
-pytest tests/test_health.py tests/test_auth.py tests/test_transacoes.py tests/test_importacao.py tests/test_resumo_mensal.py tests/test_orcamentos.py tests/test_dashboard.py tests/test_consultas.py
+pytest tests/test_health.py tests/test_auth.py tests/test_transacoes.py tests/test_importacao.py tests/test_resumo_mensal.py tests/test_orcamentos.py tests/test_dashboard.py tests/test_consultas.py tests/test_dashboard_views.py
 
 # Integração (exige docker compose up)
 pytest -m integration
@@ -113,6 +113,17 @@ Após login, os endpoints JSON de agregação ficam em:
 - Orçamentos resumo: `http://localhost:5000/dashboard/orcamentos-resumo?ano_mes=2026-07`
 
 Veja detalhes em [Fase 9 — Rotas de agregação para o dashboard](docs/fase-9.md).
+
+## Dashboard visual
+
+Após login, acesse o dashboard com gráficos Chart.js:
+
+- Visão geral: `http://localhost:5000/dashboard`
+- Categorias: `http://localhost:5000/dashboard/categorias`
+- Recorrências: `http://localhost:5000/dashboard/recorrencias`
+- Orçamentos: `http://localhost:5000/dashboard/orcamentos`
+
+Navegue entre as telas pela sub-nav; os dados vêm das APIs da Fase 9. Veja detalhes em [Fase 11 — Dashboard visual completo](docs/fase-11.md).
 
 ## Consultas personalizadas
 
@@ -155,3 +166,4 @@ docs/            # Documentação por fase
 - [Fase 8 — Perfis de importação multi-formato](docs/fase-8.md)
 - [Fase 9 — Rotas de agregação para o dashboard](docs/fase-9.md)
 - [Fase 10 — Consultas personalizadas](docs/fase-10.md)
+- [Fase 11 — Dashboard visual completo](docs/fase-11.md)

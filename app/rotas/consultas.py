@@ -20,6 +20,19 @@ consultas_bp = Blueprint("consultas", __name__)
 _INDICE_RE = re.compile(r"^f(\d+)_(campo|operador|valor|valor2)$")
 
 
+def _mes_atual() -> str:
+    agora = datetime.now()
+    return f"{agora.year}-{agora.month:02d}"
+
+
+def _contexto_html(**kwargs):
+    return {
+        "ano_mes": _mes_atual(),
+        "pagina_ativa": "consultas",
+        **kwargs,
+    }
+
+
 def _wants_json() -> bool:
     return (
         request.accept_mimetypes.best_match(["application/json", "text/html"])
@@ -218,15 +231,17 @@ def listar():
         flash(mensagem, "erro")
         return render_template(
             "consultas/listar.html",
-            transacoes=[],
-            condicoes=condicoes_raw,
-            paginacao={
-                "pagina": pagina,
-                "por_pagina": por_pagina,
-                "total": 0,
-                "total_paginas": 0,
-            },
-            max_condicoes=MAX_CONDICOES,
+            **_contexto_html(
+                transacoes=[],
+                condicoes=condicoes_raw,
+                paginacao={
+                    "pagina": pagina,
+                    "por_pagina": por_pagina,
+                    "total": 0,
+                    "total_paginas": 0,
+                },
+                max_condicoes=MAX_CONDICOES,
+            ),
         )
 
     resultado = consultar_transacoes(
@@ -256,13 +271,15 @@ def listar():
 
     return render_template(
         "consultas/listar.html",
-        transacoes=resultado["transacoes"],
-        condicoes=condicoes_raw,
-        paginacao={
-            "pagina": resultado["pagina"],
-            "por_pagina": resultado["por_pagina"],
-            "total": resultado["total"],
-            "total_paginas": resultado["total_paginas"],
-        },
-        max_condicoes=MAX_CONDICOES,
+        **_contexto_html(
+            transacoes=resultado["transacoes"],
+            condicoes=condicoes_raw,
+            paginacao={
+                "pagina": resultado["pagina"],
+                "por_pagina": resultado["por_pagina"],
+                "total": resultado["total"],
+                "total_paginas": resultado["total_paginas"],
+            },
+            max_condicoes=MAX_CONDICOES,
+        ),
     )

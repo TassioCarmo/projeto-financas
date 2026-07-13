@@ -1,0 +1,112 @@
+{% extends "dashboard/layout.html" %}
+
+{% block dashboard_title %}Categorias{% endblock %}
+{% block dashboard_heading %}Detalhamento por categoria{% endblock %}
+
+{% block dashboard_content %}
+<p class="hint">Categorias com maior gasto no período.</p>
+
+<div class="toggle-visao">
+    <button type="button" id="btn-mes" class="ativo">Mês</button>
+    <button type="button" id="btn-total">Total geral</button>
+</div>
+
+<div class="chart-box"><canvas id="chart-categorias"></canvas></div>
+<p id="vazio-categorias" class="vazio hidden">Nenhum gasto por categoria neste período.</p>
+
+<h2>Detalhamento</h2>
+<table id="tabela-categorias">
+    <thead>
+        <tr>
+            <th>Categoria</th>
+            <th>Total</th>
+            <th>Qtd</th>
+            <th>%</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+{% endblock %}
+
+{% block dashboard_scripts %}
+<script>
+(function () {
+    const anoMes = '{{ ano_mes }}';
+    let chartCategorias = null;
+    let dadosCache = null;
+    let visaoAtual = 'mes';
+
+    function preencherTabela(itens) {
+        const tbody = document.querySelector('#tabela-categorias tbody');
+        tbody.innerHTML = '';
+        itens.forEach(function (item) {
+            const tr = document.createElement('tr');
+            tr.innerHTML =
+                '<td>' + item.categoria_nome + '</td>' +
+                '<td>' + formatarMoeda(item.total) + '</td>' +
+                '<td>' + item.qtd + '</td>' +
+                '<td>' + (item.percentual != null ? item.percentual.toFixed(1) + '%' : '—') + '</td>';
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderizar(itens) {
+        const ctx = document.getElementById('chart-categorias');
+        const vazio = document.getElementById('vazio-categorias');
+        if (!itens || itens.length === 0) {
+            ctx.classList.add('hidden');
+            vazio.classList.remove('hidden');
+            preencherTabela([]);
+            if (chartCategorias) { chartCategorias.destroy(); chartCategorias = null; }
+            return;
+        }
+        ctx.classList.remove('hidden');
+        vazio.classList.add('hidden');
+        preencherTabela(itens);
+        if (chartCategorias) chartCategorias.destroy();
+        chartCategorias = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: itens.map(function (i) { return i.categoria_nome; }),
+                datasets: [{
+                    data: itens.map(function (i) { return i.total; }),
+                    backgroundColor: [
+                        '#4caf50', '#2196f3', '#ff9800', '#9c27b0', '#f44336',
+                        '#00bcd4', '#795548', '#607d8b', '#e91e63', '#3f51b5'
+                    ]
+                }]
+            },
+            options: { responsive: true }
+        });
+    }
+
+    function atualizarVisao() {
+        if (!dadosCache) return;
+        renderizar(visaoAtual === 'mes' ? dadosCache.mes : dadosCache.total_geral);
+    }
+
+    document.getElementById('btn-mes').addEventListener('click', function () {
+        visaoAtual = 'mes';
+        document.getElementById('btn-mes').classList.add('ativo');
+        document.getElementById('btn-total').classList.remove('ativo');
+        atualizarVisao();
+    });
+    document.getElementById('btn-total').addEventListener('click', function () {
+        visaoAtual = 'total_geral';
+        document.getElementById('btn-total').classList.add('ativo');
+        document.getElementById('btn-mes').classList.remove('ativo');
+        atualizarVisao();
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        esconderErro();
+        fetchJson('/dashboard/categorias-top?ano_mes=' + encodeURIComponent(anoMes))
+            .then(function (data) {
+                dadosCache = data;
+                atualizarVisao();
+            })
+            .catch(function (err) { mostrarErro(err.message); });
+    });
+})();
+</script>
+{% endblock %}

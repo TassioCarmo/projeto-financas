@@ -1,0 +1,114 @@
+{% extends "dashboard/layout.html" %}
+
+{% block dashboard_title %}Orçamentos{% endblock %}
+{% block dashboard_heading %}Status de orçamentos{% endblock %}
+
+{% block dashboard_content %}
+<p class="hint">Planejado vs. gasto por categoria no mês.</p>
+
+<div class="cards" id="cards-orcamentos">
+    <div class="card"><div class="rotulo">Planejado</div><div class="valor" id="card-planejado">—</div></div>
+    <div class="card"><div class="rotulo">Gasto</div><div class="valor" id="card-gasto">—</div></div>
+    <div class="card"><div class="rotulo">Saldo restante</div><div class="valor" id="card-saldo">—</div></div>
+    <div class="card"><div class="rotulo">% usado</div><div class="valor" id="card-percentual">—</div></div>
+</div>
+
+<h2>Planejado vs. gasto</h2>
+<div class="chart-box"><canvas id="chart-orcamentos"></canvas></div>
+<p id="vazio-orcamentos" class="vazio hidden">Nenhum orçamento definido para este mês.</p>
+
+<h2>Por categoria</h2>
+<table id="tabela-orcamentos">
+    <thead>
+        <tr>
+            <th>Categoria</th>
+            <th>Planejado</th>
+            <th>Gasto</th>
+            <th>Saldo</th>
+            <th>Uso</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+{% endblock %}
+
+{% block dashboard_scripts %}
+<script>
+(function () {
+    const anoMes = '{{ ano_mes }}';
+    let chartOrcamentos = null;
+
+    function preencherTabela(itens) {
+        const tbody = document.querySelector('#tabela-orcamentos tbody');
+        tbody.innerHTML = '';
+        itens.forEach(function (item) {
+            const pct = item.percentual_usado != null ? Math.min(item.percentual_usado, 100) : 0;
+            const tr = document.createElement('tr');
+            tr.innerHTML =
+                '<td>' + item.categoria_nome + '</td>' +
+                '<td>' + formatarMoeda(item.valor_planejado) + '</td>' +
+                '<td>' + formatarMoeda(item.valor_gasto) + '</td>' +
+                '<td>' + formatarMoeda(item.saldo_restante) + '</td>' +
+                '<td>' +
+                    (item.percentual_usado != null ? item.percentual_usado.toFixed(1) + '%' : '—') +
+                    '<div class="progress-bar"><span style="width:' + pct + '%"></span></div>' +
+                '</td>';
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderizar(dados) {
+        const totais = dados.totais;
+        document.getElementById('card-planejado').textContent = formatarMoeda(totais.valor_planejado);
+        document.getElementById('card-gasto').textContent = formatarMoeda(totais.valor_gasto);
+        document.getElementById('card-saldo').textContent = formatarMoeda(totais.saldo_restante);
+        document.getElementById('card-percentual').textContent =
+            totais.percentual_usado != null ? totais.percentual_usado.toFixed(1) + '%' : '—';
+
+        const itens = dados.por_categoria || [];
+        const ctx = document.getElementById('chart-orcamentos');
+        const vazio = document.getElementById('vazio-orcamentos');
+        preencherTabela(itens);
+
+        if (itens.length === 0) {
+            ctx.classList.add('hidden');
+            vazio.classList.remove('hidden');
+            if (chartOrcamentos) { chartOrcamentos.destroy(); chartOrcamentos = null; }
+            return;
+        }
+        ctx.classList.remove('hidden');
+        vazio.classList.add('hidden');
+        if (chartOrcamentos) chartOrcamentos.destroy();
+        chartOrcamentos = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: itens.map(function (i) { return i.categoria_nome; }),
+                datasets: [
+                    {
+                        label: 'Planejado',
+                        data: itens.map(function (i) { return i.valor_planejado; }),
+                        backgroundColor: '#4caf50'
+                    },
+                    {
+                        label: 'Gasto',
+                        data: itens.map(function (i) { return i.valor_gasto; }),
+                        backgroundColor: '#f44336'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        esconderErro();
+        fetchJson('/dashboard/orcamentos-resumo?ano_mes=' + encodeURIComponent(anoMes))
+            .then(renderizar)
+            .catch(function (err) { mostrarErro(err.message); });
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}{% block dashboard_title %}Dashboard{% endblock %} — Finanças{% endblock %}
+
+{% block content %}
+<style>
+    body.dashboard-layout { max-width: 1100px; }
+    .subnav { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem; font-size: 0.9rem; }
+    .subnav a { text-decoration: none; color: #333; padding: 0.25rem 0.5rem; border-radius: 4px; }
+    .subnav a.ativo { background: #e8f0fe; font-weight: bold; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .card { border: 1px solid #ddd; border-radius: 6px; padding: 1rem; background: #fafafa; }
+    .card .valor { font-size: 1.25rem; font-weight: bold; margin-top: 0.25rem; }
+    .card .rotulo { font-size: 0.85rem; color: #666; }
+    .chart-box { margin: 1.5rem 0; max-width: 100%; }
+    .chart-box canvas { max-height: 320px; }
+    .filtro-mes { max-width: 220px; margin-bottom: 1rem; }
+    .toggle-visao { margin: 1rem 0; }
+    .toggle-visao button { margin-top: 0; margin-right: 0.5rem; }
+    .toggle-visao button.ativo { background: #e8f0fe; }
+    .progress-bar { background: #eee; border-radius: 4px; height: 8px; margin-top: 0.25rem; }
+    .progress-bar span { display: block; height: 100%; background: #4a90d9; border-radius: 4px; }
+    .erro-api { color: #721c24; background: #f8d7da; padding: 0.75rem; border-radius: 4px; margin: 1rem 0; }
+    .vazio { color: #666; font-style: italic; margin: 1rem 0; }
+</style>
+<script>document.body.classList.add('dashboard-layout');</script>
+
+{% include "_nav_app.html" %}
+
+<h1>{% block dashboard_heading %}Dashboard{% endblock %}</h1>
+
+{% include "dashboard/_subnav.html" %}
+
+<div class="filtro-mes">
+    <label for="filtro_ano_mes">Mês de referência</label>
+    <input type="month" id="filtro_ano_mes" value="{{ ano_mes }}">
+</div>
+
+<div id="erro-api" class="erro-api hidden"></div>
+
+{% block dashboard_content %}{% endblock %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% include "dashboard/_scripts_common.html" %}
+{% block dashboard_scripts %}{% endblock %}
+{% endblock %}

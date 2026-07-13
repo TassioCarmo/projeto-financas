@@ -1,0 +1,117 @@
+{% extends "dashboard/layout.html" %}
+
+{% block dashboard_title %}Recorrências{% endblock %}
+{% block dashboard_heading %}Ranking de recorrências{% endblock %}
+
+{% block dashboard_content %}
+<p class="hint">Compras com a mesma descrição repetida 2 ou mais vezes.</p>
+
+<div class="toggle-visao">
+    <button type="button" id="btn-mes" class="ativo">Mês</button>
+    <button type="button" id="btn-total">Total geral</button>
+</div>
+
+<div class="chart-box"><canvas id="chart-recorrencias"></canvas></div>
+<p id="vazio-recorrencias" class="vazio hidden">Nenhuma compra recorrente neste período.</p>
+
+<h2>Ranking</h2>
+<table id="tabela-recorrencias">
+    <thead>
+        <tr>
+            <th>Descrição</th>
+            <th>Categoria</th>
+            <th>Ocorrências</th>
+            <th>Total</th>
+            <th>Média</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+{% endblock %}
+
+{% block dashboard_scripts %}
+<script>
+(function () {
+    const anoMes = '{{ ano_mes }}';
+    let chartRecorrencias = null;
+    let dadosCache = null;
+    let visaoAtual = 'mes';
+
+    function preencherTabela(itens) {
+        const tbody = document.querySelector('#tabela-recorrencias tbody');
+        tbody.innerHTML = '';
+        itens.forEach(function (item) {
+            const tr = document.createElement('tr');
+            tr.innerHTML =
+                '<td>' + item.descricao + '</td>' +
+                '<td>' + item.categoria_nome + '</td>' +
+                '<td>' + item.ocorrencias + '</td>' +
+                '<td>' + formatarMoeda(item.total) + '</td>' +
+                '<td>' + formatarMoeda(item.media) + '</td>';
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderizar(itens) {
+        const ctx = document.getElementById('chart-recorrencias');
+        const vazio = document.getElementById('vazio-recorrencias');
+        if (!itens || itens.length === 0) {
+            ctx.classList.add('hidden');
+            vazio.classList.remove('hidden');
+            preencherTabela([]);
+            if (chartRecorrencias) { chartRecorrencias.destroy(); chartRecorrencias = null; }
+            return;
+        }
+        ctx.classList.remove('hidden');
+        vazio.classList.add('hidden');
+        preencherTabela(itens);
+        if (chartRecorrencias) chartRecorrencias.destroy();
+        chartRecorrencias = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: itens.map(function (i) { return i.descricao; }),
+                datasets: [{
+                    label: 'Total (R$)',
+                    data: itens.map(function (i) { return i.total; }),
+                    backgroundColor: '#ff9800'
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true } }
+            }
+        });
+    }
+
+    function atualizarVisao() {
+        if (!dadosCache) return;
+        renderizar(visaoAtual === 'mes' ? dadosCache.mes : dadosCache.total_geral);
+    }
+
+    document.getElementById('btn-mes').addEventListener('click', function () {
+        visaoAtual = 'mes';
+        document.getElementById('btn-mes').classList.add('ativo');
+        document.getElementById('btn-total').classList.remove('ativo');
+        atualizarVisao();
+    });
+    document.getElementById('btn-total').addEventListener('click', function () {
+        visaoAtual = 'total_geral';
+        document.getElementById('btn-total').classList.add('ativo');
+        document.getElementById('btn-mes').classList.remove('ativo');
+        atualizarVisao();
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        esconderErro();
+        fetchJson('/dashboard/compras-recorrentes?ano_mes=' + encodeURIComponent(anoMes))
+            .then(function (data) {
+                dadosCache = data;
+                atualizarVisao();
+            })
+            .catch(function (err) { mostrarErro(err.message); });
+    });
+})();
+</script>
+{% endblock %}
