@@ -6,6 +6,7 @@ from flask import Blueprint, flash, jsonify, redirect, render_template, request,
 from app.servicos.auth import usuario_logado
 from app.servicos.categorias import categoria_ativa_existe
 from app.servicos.importacao import importar_transacoes
+from app.servicos.perfis_importacao import listar_perfis
 from app.servicos.transacoes import (
     CategoriaInvalidaError,
     TransacaoNaoEncontradaError,
@@ -208,6 +209,7 @@ def listar():
         resultado_importacao=resultado_importacao,
         filtros=filtros_raw,
         filtros_ativos=_filtros_ativos(filtros_raw),
+        perfis_importacao=listar_perfis(),
     )
 
 
@@ -225,6 +227,7 @@ def criar():
             "transacoes/listar.html",
             transacoes=listar_por_usuario(usuario["id"]),
             form=dados,
+            perfis_importacao=listar_perfis(),
         )
 
     try:
@@ -235,6 +238,7 @@ def criar():
             "transacoes/listar.html",
             transacoes=listar_por_usuario(usuario["id"]),
             form=dados,
+            perfis_importacao=listar_perfis(),
         )
 
     flash("Transação cadastrada com sucesso.", "sucesso")
@@ -259,8 +263,12 @@ def importar():
         flash("Formato não suportado. Use .csv ou .xlsx.", "erro")
         return redirect(url_for("transacoes.listar"))
 
+    perfil_id = request.form.get("perfil", "auto").strip() or "auto"
+
     # 3. Chamar serviço de importação
-    resultado = importar_transacoes(usuario["id"], arquivo.stream, arquivo.filename)
+    resultado = importar_transacoes(
+        usuario["id"], arquivo.stream, arquivo.filename, perfil_id=perfil_id
+    )
 
     # 4. Guardar resultado na session (para mostrar detalhes após redirect)
     session["ultima_importacao"] = resultado
@@ -268,8 +276,16 @@ def importar():
     # 5. Flash com resumo e redirect (padrão PRG — evita reenvio ao recarregar)
     importadas = resultado["importadas"]
     qtd_erros = len(resultado["erros"])
+    erro_perfil = (
+        qtd_erros == 1
+        and resultado["erros"][0]["linha"] == 0
+        and "perfil" in resultado["erros"][0]["mensagem"].lower()
+    )
     if importadas == 0 and qtd_erros > 0:
-        flash(f"Nenhuma transação importada. {qtd_erros} linha(s) com erro.", "erro")
+        if erro_perfil:
+            flash(resultado["erros"][0]["mensagem"], "erro")
+        else:
+            flash(f"Nenhuma transação importada. {qtd_erros} linha(s) com erro.", "erro")
     elif qtd_erros > 0:
         flash(
             f"{importadas} transação(ões) importada(s). {qtd_erros} linha(s) com erro.",

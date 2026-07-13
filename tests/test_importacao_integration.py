@@ -12,6 +12,7 @@ EMAIL = "importacao@example.com"
 SENHA = "senha123"
 NOME = "Usuário Importação"
 FIXTURE = Path(__file__).parent / "fixtures" / "planilha_exemplo.csv"
+FIXTURE_EXTRATO = Path(__file__).parent / "fixtures" / "extrato_bancario_exemplo.csv"
 
 
 @pytest.fixture(scope="session")
@@ -99,6 +100,75 @@ def test_fluxo_importacao_planilha(client):
     assert b"Supermercado" in response.data
     assert b"Uber" in response.data
     assert b"Gasto manual" in response.data
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT COUNT(*) FROM transacoes t
+                JOIN usuarios u ON u.id = t.usuario_id
+                WHERE u.email = %s AND t.origem = 'importacao'
+                """,
+                (EMAIL,),
+            )
+            assert cur.fetchone()[0] == 2
+    finally:
+        conn.close()
+
+
+def test_fluxo_importacao_extrato_bancario(client):
+    _cadastrar_e_logar(client)
+
+    with FIXTURE_EXTRATO.open("rb") as arquivo:
+        response = client.post(
+            "/transacoes/importar",
+            data={
+                "arquivo": (arquivo, "extrato_bancario_exemplo.csv"),
+                "perfil": "extrato_bancario",
+            },
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
+
+    assert response.status_code == 200
+    assert b"2 transa" in response.data.lower()
+    assert b"PIX SUPERMERCADO" in response.data
+    assert b"UBER TRIP" in response.data
+    assert b"Extrato banc" in response.data or b"extrato_bancario" in response.data
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT COUNT(*) FROM transacoes t
+                JOIN usuarios u ON u.id = t.usuario_id
+                JOIN categorias c ON c.id = t.categoria_id
+                WHERE u.email = %s
+                  AND t.origem = 'importacao'
+                  AND c.nome = 'Outros'
+                """,
+                (EMAIL,),
+            )
+            assert cur.fetchone()[0] == 2
+    finally:
+        conn.close()
+
+
+def test_fluxo_importacao_extrato_auto_detect(client):
+    _cadastrar_e_logar(client)
+
+    with FIXTURE_EXTRATO.open("rb") as arquivo:
+        response = client.post(
+            "/transacoes/importar",
+            data={"arquivo": (arquivo, "extrato_bancario_exemplo.csv"), "perfil": "auto"},
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
+
+    assert response.status_code == 200
+    assert b"2 transa" in response.data.lower()
 
     conn = get_connection()
     try:

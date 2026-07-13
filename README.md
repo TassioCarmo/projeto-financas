@@ -72,7 +72,7 @@ Resposta esperada (200):
 
 ```bash
 # Unitários (não exigem Postgres)
-pytest tests/test_health.py tests/test_auth.py tests/test_transacoes.py tests/test_importacao.py tests/test_resumo_mensal.py tests/test_orcamentos.py
+pytest tests/test_health.py tests/test_auth.py tests/test_transacoes.py tests/test_importacao.py tests/test_resumo_mensal.py tests/test_orcamentos.py tests/test_dashboard.py
 
 # Integração (exige docker compose up)
 pytest -m integration
@@ -84,7 +84,7 @@ Após login, a tela principal fica em:
 
 - Transações: `http://localhost:5000/transacoes`
 
-Cadastro manual de gastos, importação de planilha (`.csv` ou `.xlsx`) e filtros por data, categoria e pago estão na mesma tela. Veja [Fase 3 — Cadastro manual](docs/fase-3.md), [Fase 4 — Upload de planilha](docs/fase-4.md) e [Fase 7 — Filtros](docs/fase-7.md).
+Cadastro manual de gastos, importação de planilha (`.csv` ou `.xlsx`) com perfis multi-formato e filtros por data, categoria e pago estão na mesma tela. Veja [Fase 3 — Cadastro manual](docs/fase-3.md), [Fase 4 — Upload de planilha](docs/fase-4.md), [Fase 7 — Filtros](docs/fase-7.md) e [Fase 8 — Perfis de importação](docs/fase-8.md).
 
 ## Resumo mensal
 
@@ -101,6 +101,18 @@ Após login, acesse:
 - Orçamentos: `http://localhost:5000/orcamentos?ano_mes=2026-07`
 
 Defina quanto planeja gastar por categoria e acompanhe o uso no mês. Veja detalhes em [Fase 6 — Orçamentos por categoria](docs/fase-6.md).
+
+## Dashboard (API)
+
+Após login, os endpoints JSON de agregação ficam em:
+
+- Fluxo de caixa: `http://localhost:5000/dashboard/fluxo-caixa?ano_mes=2026-07`
+- Compras recorrentes: `http://localhost:5000/dashboard/compras-recorrentes?ano_mes=2026-07`
+- Categorias top: `http://localhost:5000/dashboard/categorias-top?ano_mes=2026-07`
+- Patrimônio: `http://localhost:5000/dashboard/patrimonio`
+- Orçamentos resumo: `http://localhost:5000/dashboard/orcamentos-resumo?ano_mes=2026-07`
+
+Veja detalhes em [Fase 9 — Rotas de agregação para o dashboard](docs/fase-9.md).
 
 ## Autenticação
 
@@ -132,3 +144,5 @@ docs/            # Documentação por fase
 - [Fase 5 — Dados mensais (resumo_mensal)](docs/fase-5.md)
 - [Fase 6 — Orçamentos por categoria](docs/fase-6.md)
 - [Fase 7 — Filtros na listagem de transações](docs/fase-7.md)
+- [Fase 8 — Perfis de importação multi-formato](docs/fase-8.md)
+- [Fase 9 — Rotas de agregação para o dashboard](docs/fase-9.md)

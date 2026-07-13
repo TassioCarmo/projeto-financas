@@ -67,14 +67,23 @@
 <h2>Importar planilha</h2>
 <!-- Upload de planilha: envia arquivo para POST /transacoes/importar -->
 <form method="POST" action="{{ url_for('transacoes.importar') }}" enctype="multipart/form-data">
+    <label for="perfil">Perfil de importação</label>
+    <select id="perfil" name="perfil">
+        <option value="auto">Detectar automaticamente</option>
+        {% for perfil in perfis_importacao %}
+        <option value="{{ perfil.id }}">{{ perfil.nome }}</option>
+        {% endfor %}
+    </select>
     <label for="arquivo">Arquivo (.csv ou .xlsx)</label>
     <input type="file" id="arquivo" name="arquivo" accept=".xlsx,.csv" required>
     <button type="submit">Importar</button>
 </form>
 <p class="hint">
-    Colunas: data, descricao, categoria, valor
-    (opcionais: pago, pago_por_terceiro, nome_terceiro).
-    Categorias devem corresponder às cadastradas no sistema (ex.: Alimentação, Transporte).
+    Perfis disponíveis:
+    {% for perfil in perfis_importacao %}
+    <strong>{{ perfil.nome }}</strong> — {{ perfil.descricao }}{% if not loop.last %}; {% endif %}
+    {% endfor %}
+    Categorias do perfil Padrão devem corresponder às cadastradas no sistema.
 </p>
 
 {% if resultado_importacao %}
@@ -83,6 +92,11 @@
     <p>
         {{ resultado_importacao.importadas }} transação(ões) importada(s),
         {{ resultado_importacao.erros|length }} linha(s) com erro.
+        {% if resultado_importacao.perfil_nome %}
+        Perfil usado: {{ resultado_importacao.perfil_nome }}.
+        {% elif resultado_importacao.perfil_usado %}
+        Perfil usado: {{ resultado_importacao.perfil_usado }}.
+        {% endif %}
     </p>
     {% if resultado_importacao.erros %}
     <table>
