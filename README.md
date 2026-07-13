@@ -72,7 +72,7 @@ Resposta esperada (200):
 
 ```bash
 # Unitários (não exigem Postgres)
-pytest tests/test_health.py tests/test_auth.py tests/test_transacoes.py tests/test_importacao.py tests/test_resumo_mensal.py tests/test_orcamentos.py tests/test_dashboard.py
+pytest tests/test_health.py tests/test_auth.py tests/test_transacoes.py tests/test_importacao.py tests/test_resumo_mensal.py tests/test_orcamentos.py tests/test_dashboard.py tests/test_consultas.py
 
 # Integração (exige docker compose up)
 pytest -m integration
@@ -114,6 +114,14 @@ Após login, os endpoints JSON de agregação ficam em:
 
 Veja detalhes em [Fase 9 — Rotas de agregação para o dashboard](docs/fase-9.md).
 
+## Consultas personalizadas
+
+Após login, acesse:
+
+- Consultas: `http://localhost:5000/consultas`
+
+Combine filtros por categoria, data, valor, pago e pago por terceiro com paginação. Veja detalhes em [Fase 10 — Consultas personalizadas](docs/fase-10.md).
+
 ## Autenticação
 
 Após subir a aplicação, acesse:
@@ -146,3 +154,4 @@ docs/            # Documentação por fase
 - [Fase 7 — Filtros na listagem de transações](docs/fase-7.md)
 - [Fase 8 — Perfis de importação multi-formato](docs/fase-8.md)
 - [Fase 9 — Rotas de agregação para o dashboard](docs/fase-9.md)
+- [Fase 10 — Consultas personalizadas](docs/fase-10.md)

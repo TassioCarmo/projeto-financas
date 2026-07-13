@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}Consultas — Finanças{% endblock %}
+
+{% block content %}
+<nav class="nav">
+    <a href="{{ url_for('transacoes.listar') }}">Transações</a>
+    <a href="{{ url_for('resumo_mensal.listar') }}">Resumo mensal</a>
+    <a href="{{ url_for('orcamentos.listar') }}">Orçamentos</a>
+    <a href="{{ url_for('consultas.listar') }}">Consultas</a>
+    <a href="{{ url_for('perfil.exibir') }}">Perfil</a>
+    <form method="POST" action="{{ url_for('auth.logout') }}" style="display:inline; margin:0;">
+        <button type="submit" style="margin-top:0;">Sair</button>
+    </form>
+</nav>
+
+<h1>Consultas personalizadas</h1>
+<p class="hint">Combine até {{ max_condicoes }} filtros para buscar transações. Todas as consultas ficam restritas às suas transações.</p>
+
+<h2>Construtor de filtros</h2>
+<form id="form-consultas" method="GET" action="{{ url_for('consultas.listar') }}" style="margin-bottom: 2rem;">
+    <div id="filtros-container"></div>
+
+    <div class="form-grid" style="margin-top: 1rem;">
+        <div>
+            <label for="pagina">Página</label>
+            <input type="number" id="pagina" name="pagina" min="1"
+                   value="{{ paginacao.pagina if paginacao else 1 }}">
+        </div>
+        <div>
+            <label for="por_pagina">Itens por página</label>
+            <input type="number" id="por_pagina" name="por_pagina" min="1" max="100"
+                   value="{{ paginacao.por_pagina if paginacao else 25 }}">
+        </div>
+    </div>
+
+    <div style="margin-top: 1rem;">
+        <button type="button" id="btn-adicionar-filtro">Adicionar filtro</button>
+        <button type="submit">Consultar</button>
+        <a href="{{ url_for('consultas.listar') }}" style="margin-left: 1rem;">Limpar</a>
+    </div>
+</form>
+
+<h2>Resultados</h2>
+{% if paginacao and paginacao.total > 0 %}
+<p class="hint">
+    Página {{ paginacao.pagina }} de {{ paginacao.total_paginas }} —
+    {{ paginacao.total }} resultado(s)
+</p>
+{% elif condicoes %}
+<p class="hint">Nenhuma transação encontrada com os filtros informados.</p>
+{% else %}
+<p class="hint">Adicione filtros e clique em Consultar, ou consulte sem filtros para ver todas as transações.</p>
+{% endif %}
+
+{% if transacoes %}
+<table>
+    <thead>
+        <tr>
+            <th>Data</th>
+            <th>Descrição</th>
+            <th>Categoria</th>
+            <th>Valor</th>
+            <th>Pago</th>
+            <th>Terceiro</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for t in transacoes %}
+        <tr>
+            <td>{{ t.data_compra.strftime('%d/%m/%Y') if t.data_compra else t.data_compra }}</td>
+            <td>{{ t.descricao }}</td>
+            <td>{{ t.categoria_nome }}</td>
+            <td>R$ {{ '%.2f'|format(t.valor) }}</td>
+            <td>{{ 'Sim' if t.pago else 'Não' }}</td>
+            <td>{{ t.nome_terceiro or '—' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if paginacao and paginacao.total_paginas > 1 %}
+<nav class="nav" style="margin-top: 1.5rem;">
+    {% if paginacao.pagina > 1 %}
+    <a id="link-pagina-anterior" href="#">Anterior</a>
+    {% endif %}
+    {% if paginacao.pagina < paginacao.total_paginas %}
+    <a id="link-pagina-proxima" href="#">Próxima</a>
+    {% endif %}
+</nav>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const MAX_CONDICOES = {{ max_condicoes }};
+    const condicoesIniciais = {{ condicoes | tojson if condicoes else '[]' }};
+    const paginacaoAtual = {{ paginacao | tojson if paginacao else '{"pagina":1,"por_pagina":25}' }};
+
+    const OPERADORES_POR_CAMPO = {
+        categoria: [
+            { value: 'igual', label: 'Igual' },
+            { value: 'contem', label: 'Contém' }
+        ],
+        data_compra: [
+            { value: 'igual', label: 'Igual' },
+            { value: 'maior_que', label: 'Maior que' },
+            { value: 'menor_que', label: 'Menor que' },
+            { value: 'entre', label: 'Entre' }
+        ],
+        valor: [
+            { value: 'igual', label: 'Igual' },
+            { value: 'maior_que', label: 'Maior que' },
+            { value: 'menor_que', label: 'Menor que' },
+            { value: 'entre', label: 'Entre' }
+        ],
+        pago: [{ value: 'igual', label: 'Igual' }],
+        pago_por_terceiro: [{ value: 'igual', label: 'Igual' }]
+    };
+
+    const CAMPOS = [
+        { value: 'categoria', label: 'Categoria' },
+        { value: 'data_compra', label: 'Data da compra' },
+        { value: 'valor', label: 'Valor' },
+        { value: 'pago', label: 'Pago' },
+        { value: 'pago_por_terceiro', label: 'Pago por terceiro' }
+    ];
+
+    let categorias = [];
+    let proximoIndice = 0;
+    const container = document.getElementById('filtros-container');
+    const btnAdicionar = document.getElementById('btn-adicionar-filtro');
+
+    function carregarCategorias() {
+        return fetch('/categorias', { headers: { 'Accept': 'application/json' } })
+            .then(function (resp) { return resp.json(); })
+            .then(function (data) { categorias = data; })
+            .catch(function () { categorias = []; });
+    }
+
+    function criarSelectCampo(indice, valorAtual) {
+        const select = document.createElement('select');
+        select.name = 'f' + indice + '_campo';
+        select.required = true;
+        select.innerHTML = '<option value="">Selecione</option>';
+        CAMPOS.forEach(function (campo) {
+            const opt = document.createElement('option');
+            opt.value = campo.value;
+            opt.textContent = campo.label;
+            if (valorAtual === campo.value) opt.selected = true;
+            select.appendChild(opt);
+        });
+        return select;
+    }
+
+    function criarSelectOperador(indice, campo, valorAtual) {
+        const select = document.createElement('select');
+        select.name = 'f' + indice + '_operador';
+        select.required = true;
+        const operadores = OPERADORES_POR_CAMPO[campo] || [];
+        operadores.forEach(function (op) {
+            const opt = document.createElement('option');
+            opt.value = op.value;
+            opt.textContent = op.label;
+            if (valorAtual === op.value) opt.selected = true;
+            select.appendChild(opt);
+        });
+        return select;
+    }
+
+    function criarInputValor(campo, operador, valorAtual) {
+        if (campo === 'categoria' && operador === 'igual') {
+            const select = document.createElement('select');
+            select.required = true;
+            select.innerHTML = '<option value="">Selecione</option>';
+            categorias.forEach(function (cat) {
+                const opt = document.createElement('option');
+                opt.value = String(cat.id);
+                opt.textContent = cat.nome;
+                if (String(valorAtual) === String(cat.id)) opt.selected = true;
+                select.appendChild(opt);
+            });
+            return select;
+        }
+
+        if (campo === 'pago' || campo === 'pago_por_terceiro') {
+            const select = document.createElement('select');
+            select.required = true;
+            select.innerHTML =
+                '<option value="">Selecione</option>' +
+                '<option value="true"' + (valorAtual === 'true' ? ' selected' : '') + '>Sim</option>' +
+                '<option value="false"' + (valorAtual === 'false' ? ' selected' : '') + '>Não</option>';
+            return select;
+        }
+
+        const input = document.createElement('input');
+        input.required = true;
+        if (campo === 'data_compra') {
+            input.type = 'date';
+        } else if (campo === 'valor') {
+            input.type = 'number';
+            input.step = '0.01';
+            input.min = '0';
+        } else {
+            input.type = 'text';
+        }
+        if (valorAtual) input.value = valorAtual;
+        return input;
+    }
+
+    function atualizarLinha(linha, dados) {
+        const indice = linha.dataset.indice;
+        const campoEl = linha.querySelector('[name$="_campo"]');
+        const operadorEl = linha.querySelector('[name$="_operador"]');
+        const valorEl = linha.querySelector('[name$="_valor"]');
+        const valor2El = linha.querySelector('[name$="_valor2"]');
+
+        const campo = dados.campo !== undefined
+            ? dados.campo
+            : (campoEl ? campoEl.value : '');
+        const opsPadrao = OPERADORES_POR_CAMPO[campo] || [];
+        const operador = dados.operador !== undefined
+            ? dados.operador
+            : (operadorEl ? operadorEl.value : (opsPadrao[0] ? opsPadrao[0].value : ''));
+        const valor = dados.valor !== undefined
+            ? dados.valor
+            : (valorEl ? valorEl.value : '');
+        const valor2 = dados.valor2 !== undefined
+            ? dados.valor2
+            : (valor2El ? valor2El.value : '');
+
+        const campoContainer = linha.querySelector('.campo-container');
+        const operadorContainer = linha.querySelector('.operador-container');
+        const valorContainer = linha.querySelector('.valor-container');
+
+        campoContainer.querySelectorAll('select').forEach(function (el) { el.remove(); });
+        operadorContainer.querySelectorAll('select').forEach(function (el) { el.remove(); });
+        valorContainer.querySelectorAll('select, input').forEach(function (el) { el.remove(); });
+
+        const campoSelect = criarSelectCampo(indice, campo);
+        const operadorSelect = criarSelectOperador(indice, campo, operador);
+
+        campoContainer.appendChild(campoSelect);
+        operadorContainer.appendChild(operadorSelect);
+
+        const valorInput = criarInputValor(campo, operador, valor);
+        valorInput.name = 'f' + indice + '_valor';
+        valorContainer.appendChild(valorInput);
+
+        if (operador === 'entre') {
+            const valor2Input = criarInputValor(campo, operador, valor2);
+            valor2Input.name = 'f' + indice + '_valor2';
+            valor2Input.style.marginTop = '0.5rem';
+            valorContainer.appendChild(valor2Input);
+        }
+
+        campoSelect.addEventListener('change', function () {
+            const ops = OPERADORES_POR_CAMPO[campoSelect.value] || [];
+            atualizarLinha(linha, {
+                campo: campoSelect.value,
+                operador: ops[0] ? ops[0].value : '',
+            });
+        });
+        operadorSelect.addEventListener('change', function () {
+            atualizarLinha(linha, {
+                campo: campoSelect.value,
+                operador: operadorSelect.value,
+                valor: valorInput.value,
+                valor2: linha.querySelector('[name$="_valor2"]')
+                    ? linha.querySelector('[name$="_valor2"]').value
+                    : '',
+            });
+        });
+    }
+
+    function criarLinha(dados) {
+        const indice = proximoIndice++;
+        const linha = document.createElement('div');
+        linha.className = 'filtro-linha form-grid';
+        linha.dataset.indice = indice;
+        linha.style.marginBottom = '1rem';
+        linha.innerHTML =
+            '<div class="campo-container"><label>Campo</label></div>' +
+            '<div class="operador-container"><label>Operador</label></div>' +
+            '<div class="valor-container"><label>Valor</label></div>' +
+            '<div style="padding-top: 1.75rem;">' +
+            '<button type="button" class="btn-remover-filtro">Remover</button></div>';
+
+        container.appendChild(linha);
+        atualizarLinha(linha, dados || {});
+
+        linha.querySelector('.btn-remover-filtro').addEventListener('click', function () {
+            linha.remove();
+            atualizarBotaoAdicionar();
+        });
+        atualizarBotaoAdicionar();
+    }
+
+    function atualizarBotaoAdicionar() {
+        const total = container.querySelectorAll('.filtro-linha').length;
+        btnAdicionar.disabled = total >= MAX_CONDICOES;
+    }
+
+    function montarUrlComPagina(pagina) {
+        const params = new URLSearchParams(window.location.search);
+        params.set('pagina', String(pagina));
+        params.set('por_pagina', document.getElementById('por_pagina').value || String(paginacaoAtual.por_pagina || 25));
+        return '{{ url_for("consultas.listar") }}?' + params.toString();
+    }
+
+    btnAdicionar.addEventListener('click', function () {
+        criarLinha({});
+    });
+
+    const linkAnterior = document.getElementById('link-pagina-anterior');
+    if (linkAnterior) {
+        linkAnterior.href = montarUrlComPagina({{ paginacao.pagina if paginacao else 1 }} - 1);
+    }
+    const linkProxima = document.getElementById('link-pagina-proxima');
+    if (linkProxima) {
+        linkProxima.href = montarUrlComPagina({{ paginacao.pagina if paginacao else 1 }} + 1);
+    }
+
+    document.getElementById('form-consultas').addEventListener('submit', function () {
+        document.getElementById('pagina').value = '1';
+    });
+
+    carregarCategorias().then(function () {
+        if (condicoesIniciais.length > 0) {
+            condicoesIniciais.forEach(function (condicao) {
+                criarLinha(condicao);
+            });
+        } else {
+            criarLinha({});
+        }
+    });
+})();
+</script>
+{% endblock %}

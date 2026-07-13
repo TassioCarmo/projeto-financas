@@ -3,6 +3,7 @@ from flask import Flask
 from app.config import Config
 from app.rotas.auth import auth_bp
 from app.rotas.categorias import categorias_bp
+from app.rotas.consultas import consultas_bp
 from app.rotas.dashboard import dashboard_bp
 from app.rotas.health import health_bp
 from app.rotas.perfil import perfil_bp
@@ -19,6 +20,7 @@ def create_app(config_class=Config):
     app.register_blueprint(auth_bp)
     app.register_blueprint(perfil_bp)
     app.register_blueprint(categorias_bp)
+    app.register_blueprint(consultas_bp)
     app.register_blueprint(transacoes_bp)
     app.register_blueprint(resumo_mensal_bp)
     app.register_blueprint(orcamentos_bp)
