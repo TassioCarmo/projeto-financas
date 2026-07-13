@@ -16,3 +16,4 @@ class PerfilImportacao:
     formatos_data: tuple[str, ...]
     categoria_padrao: str | None = None
     valor_absoluto: bool = False
+    mapeamento_categorias: dict[str, str] | None = None

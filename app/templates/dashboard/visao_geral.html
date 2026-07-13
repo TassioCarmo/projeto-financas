@@ -118,6 +118,11 @@
         if (dadosFluxo) renderFluxo(dadosFluxo);
         if (dadosPatrimonio) renderPatrimonio(dadosPatrimonio);
     });
+
+    window.addEventListener('balancevisibilitychange', function () {
+        if (dadosFluxo) renderFluxo(dadosFluxo);
+        if (dadosPatrimonio) renderPatrimonio(dadosPatrimonio);
+    });
 })();
 </script>
 {% endblock %}

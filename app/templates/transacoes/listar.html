@@ -107,7 +107,7 @@
 {% if resultado_importacao %}
 <div class="importacao-resumo">
     <p>
-        {{ resultado_importacao.importadas }} transação(ões) importada(s),
+        {{ resultado_importacao.importadas }} transação(ões) importada(s){% if resultado_importacao.atualizadas %}, {{ resultado_importacao.atualizadas }} atualizada(s){% endif %}{% if resultado_importacao.ignoradas %}, {{ resultado_importacao.ignoradas }} ignorada(s) (já existentes){% endif %},
         {{ resultado_importacao.erros|length }} linha(s) com erro.
         {% if resultado_importacao.perfil_nome %}
         Perfil usado: {{ resultado_importacao.perfil_nome }}.
@@ -201,7 +201,7 @@
                 <td>{{ t.data_compra.strftime('%d/%m/%Y') if t.data_compra else t.data_compra }}</td>
                 <td>{{ t.descricao }}</td>
                 <td>{{ t.categoria_nome }}</td>
-                <td>R$ {{ '%.2f'|format(t.valor) }}</td>
+                <td><span data-sensitive="currency">R$ {{ '%.2f'|format(t.valor) }}</span></td>
                 <td>
                     {% if t.pago %}{{ badge("Sim", "success") }}{% else %}{{ badge("Não", "neutral") }}{% endif %}
                 </td>

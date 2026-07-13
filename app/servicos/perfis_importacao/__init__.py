@@ -1,12 +1,14 @@
 import unicodedata
 
 from app.servicos.perfis_importacao.base import FormatoPlanilhaError, PerfilImportacao
+from app.servicos.perfis_importacao.controle_cartao_familiar import PERFIL_CARTAO_FAMILIAR
 from app.servicos.perfis_importacao.extrato_bancario import PERFIL_EXTRATO
 from app.servicos.perfis_importacao.padrao import PERFIL_PADRAO
 
 PERFIS: dict[str, PerfilImportacao] = {
     PERFIL_PADRAO.id: PERFIL_PADRAO,
     PERFIL_EXTRATO.id: PERFIL_EXTRATO,
+    PERFIL_CARTAO_FAMILIAR.id: PERFIL_CARTAO_FAMILIAR,
 }
 
 
@@ -63,6 +65,9 @@ def detectar_perfil(colunas) -> PerfilImportacao | None:
         except FormatoPlanilhaError:
             continue
 
+        if perfil.id == "controle_cartao_familiar" and "pessoa" not in mapeamento:
+            continue
+
         opcionais_mapeadas = sum(
             1 for coluna in perfil.colunas_opcionais if coluna in mapeamento
         )
@@ -74,6 +79,7 @@ def detectar_perfil(colunas) -> PerfilImportacao | None:
     candidatos.sort(
         key=lambda item: (
             item[2],
+            1 if item[0].id == "controle_cartao_familiar" else 0,
             1 if item[0].id == "padrao" and "categoria" in item[1] else 0,
         ),
         reverse=True,

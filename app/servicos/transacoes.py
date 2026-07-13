@@ -207,6 +207,49 @@ def atualizar_transacao(
         conn.close()
 
 
+def listar_para_deduplicacao(
+    usuario_id: str,
+    data_inicio: date,
+    data_fim: date,
+) -> list[dict]:
+    """
+    Carrega transações existentes em lote para deduplicação na importação.
+
+    Retorna campos suficientes para montar a chave composta e decidir
+    insert/update/skip sem consulta linha a linha.
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    id, data_compra, descricao, categoria_id, valor,
+                    nome_terceiro, pago
+                FROM transacoes
+                WHERE usuario_id = %s
+                  AND data_compra >= %s
+                  AND data_compra <= %s
+                ORDER BY id
+                """,
+                (usuario_id, data_inicio, data_fim),
+            )
+            return [
+                {
+                    "id": row[0],
+                    "data_compra": row[1],
+                    "descricao": row[2],
+                    "categoria_id": row[3],
+                    "valor": row[4],
+                    "nome_terceiro": row[5],
+                    "pago": row[6],
+                }
+                for row in cur.fetchall()
+            ]
+    finally:
+        conn.close()
+
+
 def excluir_transacao(usuario_id: str, transacao_id: int) -> None:
     conn = get_connection()
     try:

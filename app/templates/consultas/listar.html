@@ -72,7 +72,7 @@
                 <td>{{ t.data_compra.strftime('%d/%m/%Y') if t.data_compra else t.data_compra }}</td>
                 <td>{{ t.descricao }}</td>
                 <td>{{ t.categoria_nome }}</td>
-                <td>R$ {{ '%.2f'|format(t.valor) }}</td>
+                <td><span data-sensitive="currency">R$ {{ '%.2f'|format(t.valor) }}</span></td>
                 <td>
                     {% if t.pago %}{{ badge("Sim", "success") }}{% else %}{{ badge("Não", "neutral") }}{% endif %}
                 </td>

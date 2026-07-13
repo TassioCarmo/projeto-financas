@@ -383,6 +383,61 @@ input[type="file"].form-control::file-selector-button {
 [data-theme="dark"] .theme-toggle .icon-sun { opacity: 1; transform: rotate(0) scale(1); }
 [data-theme="dark"] .theme-toggle .icon-moon { opacity: 0; transform: rotate(90deg) scale(0.5); }
 
+/* --- Balance privacy toggle --- */
+.balance-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.balance-toggle:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.balance-toggle svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.balance-toggle .icon-eye-open,
+.balance-toggle .icon-eye-closed {
+  position: absolute;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+[data-hide-balances="false"] .balance-toggle .icon-eye-open,
+html:not([data-hide-balances="true"]) .balance-toggle .icon-eye-open {
+  opacity: 1;
+  transform: rotate(0) scale(1);
+}
+
+[data-hide-balances="false"] .balance-toggle .icon-eye-closed,
+html:not([data-hide-balances="true"]) .balance-toggle .icon-eye-closed {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.5);
+}
+
+[data-hide-balances="true"] .balance-toggle .icon-eye-open {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.5);
+}
+
+[data-hide-balances="true"] .balance-toggle .icon-eye-closed {
+  opacity: 1;
+  transform: rotate(0) scale(1);
+}
+
 /* --- Subnav (dashboard tabs) --- */
 .subnav {
   display: flex;

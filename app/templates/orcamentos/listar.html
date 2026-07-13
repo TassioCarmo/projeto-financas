@@ -79,8 +79,8 @@
             {% for s in status %}
             <tr>
                 <td>{{ s.categoria_nome }}</td>
-                <td>R$ {{ "%.2f"|format(s.valor_planejado) }}</td>
-                <td>R$ {{ "%.2f"|format(s.valor_gasto) }}</td>
+                <td><span data-sensitive="currency">R$ {{ "%.2f"|format(s.valor_planejado) }}</span></td>
+                <td><span data-sensitive="currency">R$ {{ "%.2f"|format(s.valor_gasto) }}</span></td>
                 <td>
                     {% if s.percentual_usado is not none %}
                         {% if s.percentual_usado > 100 %}
@@ -96,9 +96,9 @@
                 </td>
                 <td>
                     {% if s.saldo_restante < 0 %}
-                        <span class="text-danger font-bold">R$ {{ "%.2f"|format(s.saldo_restante) }}</span>
+                        <span class="text-danger font-bold" data-sensitive="currency">R$ {{ "%.2f"|format(s.saldo_restante) }}</span>
                     {% else %}
-                        R$ {{ "%.2f"|format(s.saldo_restante) }}
+                        <span data-sensitive="currency">R$ {{ "%.2f"|format(s.saldo_restante) }}</span>
                     {% endif %}
                 </td>
             </tr>

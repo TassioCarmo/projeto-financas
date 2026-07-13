@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Finanças{% endblock %}</title>
 
-    {# Anti-FOUC: aplica tema antes do paint #}
+    {# Anti-FOUC: aplica tema e privacidade de saldos antes do paint #}
     <script>
-    (function(){try{var t=localStorage.getItem('financas-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}})();
+    (function(){try{var t=localStorage.getItem('financas-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);if(localStorage.getItem('financas-hide-balances')==='true')document.documentElement.setAttribute('data-hide-balances','true')}catch(e){}})();
     </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,6 +28,7 @@
     {% block body %}{% endblock %}
 
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/balance-privacy.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>

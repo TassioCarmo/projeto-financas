@@ -93,19 +93,19 @@
             {% for r in resumos %}
             <tr>
                 <td>{{ r.ano_mes }}</td>
-                <td>R$ {{ "%.2f"|format(r.renda) }}</td>
-                <td>R$ {{ "%.2f"|format(r.investimento) }}</td>
-                <td>R$ {{ "%.2f"|format(r.rendimentos) }}</td>
+                <td><span data-sensitive="currency">R$ {{ "%.2f"|format(r.renda) }}</span></td>
+                <td><span data-sensitive="currency">R$ {{ "%.2f"|format(r.investimento) }}</span></td>
+                <td><span data-sensitive="currency">R$ {{ "%.2f"|format(r.rendimentos) }}</span></td>
                 <td>
                     {% if r.patrimonio is not none %}
-                        R$ {{ "%.2f"|format(r.patrimonio) }}
+                        <span data-sensitive="currency">R$ {{ "%.2f"|format(r.patrimonio) }}</span>
                     {% else %}
                         —
                     {% endif %}
                 </td>
                 <td>
                     {% if r.patrimonio_sugerido is not none %}
-                        R$ {{ "%.2f"|format(r.patrimonio_sugerido) }}
+                        <span data-sensitive="currency">R$ {{ "%.2f"|format(r.patrimonio_sugerido) }}</span>
                     {% else %}
                         —
                     {% endif %}

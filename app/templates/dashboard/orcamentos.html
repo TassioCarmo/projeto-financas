@@ -118,6 +118,9 @@
     window.addEventListener('themechange', function () {
         if (dadosCache) renderizar(dadosCache);
     });
+    window.addEventListener('balancevisibilitychange', function () {
+        if (dadosCache) renderizar(dadosCache);
+    });
 })();
 </script>
 {% endblock %}

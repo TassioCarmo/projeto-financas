@@ -39,11 +39,31 @@
 
     window.getChartOptions = function (overrides) {
         var colors = window.getChartColors();
+        var oculto = window.FinancasBalancePrivacy && window.FinancasBalancePrivacy.isHidden();
         var base = {
             responsive: true,
             plugins: {
                 legend: {
                     labels: { color: colors.text }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            if (oculto) {
+                                return '••••';
+                            }
+                            var label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null && context.parsed.y !== undefined) {
+                                label += window.FinancasBalancePrivacy
+                                    ? window.FinancasBalancePrivacy.formatarMoeda(context.parsed.y)
+                                    : context.parsed.y;
+                            }
+                            return label;
+                        }
+                    }
                 }
             },
             scales: {
@@ -52,7 +72,15 @@
                     grid: { color: colors.grid }
                 },
                 y: {
-                    ticks: { color: colors.text },
+                    ticks: {
+                        color: colors.text,
+                        callback: function (value) {
+                            if (oculto) {
+                                return '••••';
+                            }
+                            return value;
+                        }
+                    },
                     grid: { color: colors.grid }
                 }
             }

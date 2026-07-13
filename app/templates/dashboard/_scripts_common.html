@@ -21,6 +21,9 @@
     };
 
     window.formatarMoeda = function (valor) {
+        if (window.FinancasBalancePrivacy) {
+            return window.FinancasBalancePrivacy.formatarMoeda(valor);
+        }
         return 'R$ ' + Number(valor).toLocaleString('pt-BR', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2

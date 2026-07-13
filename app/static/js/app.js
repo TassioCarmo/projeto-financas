@@ -15,9 +15,22 @@
         });
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initFlashDismiss);
-    } else {
+    function initBalancePrivacy() {
+        if (!window.FinancasBalancePrivacy) return;
+        window.FinancasBalancePrivacy.aplicarMascaraDOM();
+        window.addEventListener('balancevisibilitychange', function () {
+            window.FinancasBalancePrivacy.aplicarMascaraDOM();
+        });
+    }
+
+    function init() {
         initFlashDismiss();
+        initBalancePrivacy();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
     }
 })();

@@ -26,7 +26,8 @@ as demais linhas de serem importadas.
 
 
 
-from datetime import date, datetime
+from collections import defaultdict, deque
+from datetime import date, datetime, timedelta
 
 from decimal import Decimal, InvalidOperation
 
@@ -60,7 +61,18 @@ from app.servicos.perfis_importacao import (
 
 from app.servicos.perfis_importacao.padrao import PERFIL_PADRAO
 
-from app.servicos.transacoes import CategoriaInvalidaError, criar_transacao
+from app.servicos.planilha_cartao_familiar import (
+    detectar_formato_cartao_familiar,
+    ler_planilha_cartao_familiar,
+)
+
+from app.servicos.transacoes import (
+    CategoriaInvalidaError,
+    TransacaoNaoEncontradaError,
+    atualizar_transacao,
+    criar_transacao,
+    listar_para_deduplicacao,
+)
 
 
 
@@ -73,6 +85,21 @@ COLUNAS_OPCIONAIS = PERFIL_PADRAO.colunas_opcionais
 ALIASES_COLUNAS = PERFIL_PADRAO.aliases_colunas
 
 FORMATOS_DATA = PERFIL_PADRAO.formatos_data
+
+_MESES_PARA_NUMERO = {
+    "janeiro": 1,
+    "fevereiro": 2,
+    "marco": 3,
+    "abril": 4,
+    "maio": 5,
+    "junho": 6,
+    "julho": 7,
+    "agosto": 8,
+    "setembro": 9,
+    "outubro": 10,
+    "novembro": 11,
+    "dezembro": 12,
+}
 
 
 
@@ -308,6 +335,52 @@ def _parse_valor(valor, perfil: PerfilImportacao) -> Decimal | None:
 
 
 
+def _data_primeiro_dia_mes(nome_mes: str, ano: int | None = None) -> date | None:
+    mes = _MESES_PARA_NUMERO.get(_normalizar_nome_coluna(nome_mes))
+    if mes is None:
+        return None
+    return date(ano or 2026, mes, 1)
+
+
+def _resolver_categoria(
+    categoria_raw,
+    mapa_categorias: dict[str, int],
+    perfil: PerfilImportacao,
+) -> tuple[int | None, str | None]:
+    categoria_chave = _normalizar_nome_coluna(str(categoria_raw))
+    if perfil.mapeamento_categorias:
+        categoria_mapeada = perfil.mapeamento_categorias.get(categoria_chave)
+        if categoria_mapeada:
+            categoria_chave = _normalizar_nome_coluna(categoria_mapeada)
+    categoria_id = mapa_categorias.get(categoria_chave)
+    if categoria_id is None:
+        return None, f"Categoria '{categoria_raw}' não encontrada."
+    return categoria_id, None
+
+
+def _resolver_pessoa(
+    row: pd.Series,
+    mapeamento: dict[str, str],
+) -> tuple[bool, str | None]:
+    pessoa_raw = _valor_celula(row, mapeamento.get("pessoa"))
+    if _celula_vazia(pessoa_raw):
+        pago_por_terceiro = _parse_bool(
+            _valor_celula(row, mapeamento.get("pago_por_terceiro"))
+        )
+        nome_terceiro_raw = _valor_celula(row, mapeamento.get("nome_terceiro"))
+        nome_terceiro = (
+            None
+            if _celula_vazia(nome_terceiro_raw)
+            else str(nome_terceiro_raw).strip()
+        )
+        return pago_por_terceiro, nome_terceiro
+
+    pessoa_norm = _normalizar_nome_coluna(str(pessoa_raw))
+    if pessoa_norm == "eu":
+        return False, None
+    return True, str(pessoa_raw).strip()
+
+
 def _parse_bool(valor) -> bool:
 
     """Converte 'sim', 'true', '1' etc. em True; qualquer outro valor vazio vira False."""
@@ -346,6 +419,8 @@ def _validar_linha(
 
     perfil: PerfilImportacao,
 
+    data_resolvida: date | None = None,
+
 ) -> tuple[dict | None, str | None]:
 
     """
@@ -362,6 +437,10 @@ def _validar_linha(
 
     if data is None:
 
+        data = data_resolvida
+
+    if data is None:
+
         return None, "Data inválida ou ausente."
 
 
@@ -373,6 +452,12 @@ def _validar_linha(
         return None, "Descrição é obrigatória."
 
     descricao = str(descricao_raw).strip()
+
+    observacoes_raw = _valor_celula(row, mapeamento.get("observacoes"))
+
+    if not _celula_vazia(observacoes_raw):
+
+        descricao = f"{descricao} (obs: {str(observacoes_raw).strip()})"
 
 
 
@@ -386,21 +471,25 @@ def _validar_linha(
 
             return None, "Categoria é obrigatória."
 
-        categoria_chave = _normalizar_nome_coluna(str(categoria_raw))
+        categoria_id, erro_categoria = _resolver_categoria(
 
-        categoria_id = mapa_categorias.get(categoria_chave)
+            categoria_raw, mapa_categorias, perfil
 
-        if categoria_id is None:
+        )
 
-            return None, f"Categoria '{categoria_raw}' não encontrada."
+        if erro_categoria:
+
+            return None, erro_categoria
 
     elif perfil.categoria_padrao:
 
-        categoria_chave = _normalizar_nome_coluna(perfil.categoria_padrao)
+        categoria_id, erro_categoria = _resolver_categoria(
 
-        categoria_id = mapa_categorias.get(categoria_chave)
+            perfil.categoria_padrao, mapa_categorias, perfil
 
-        if categoria_id is None:
+        )
+
+        if erro_categoria:
 
             return None, f"Categoria padrão '{perfil.categoria_padrao}' não encontrada."
 
@@ -420,21 +509,7 @@ def _validar_linha(
 
     pago = _parse_bool(_valor_celula(row, mapeamento.get("pago")))
 
-    pago_por_terceiro = _parse_bool(
-
-        _valor_celula(row, mapeamento.get("pago_por_terceiro"))
-
-    )
-
-
-
-    nome_terceiro_raw = _valor_celula(row, mapeamento.get("nome_terceiro"))
-
-    nome_terceiro = (
-
-        None if _celula_vazia(nome_terceiro_raw) else str(nome_terceiro_raw).strip()
-
-    )
+    pago_por_terceiro, nome_terceiro = _resolver_pessoa(row, mapeamento)
 
 
 
@@ -512,12 +587,170 @@ def ler_planilha(arquivo: BinaryIO, nome_arquivo: str) -> pd.DataFrame:
 
     if nome.endswith(".xlsx"):
 
-        return pd.read_excel(arquivo, engine="openpyxl")
+        conteudo = arquivo.read()
+
+        arquivo.seek(0)
+
+        if detectar_formato_cartao_familiar(BytesIO(conteudo)):
+
+            return ler_planilha_cartao_familiar(BytesIO(conteudo))
+
+        return pd.read_excel(BytesIO(conteudo), engine="openpyxl")
 
     raise FormatoPlanilhaError("Formato não suportado. Use .csv ou .xlsx.")
 
 
 
+
+
+def gerar_chave_deduplicacao(dados: dict) -> tuple:
+    """
+    Chave estável para identificar a mesma compra entre importações.
+
+    Usa data + descrição + categoria + valor + pessoa (nome_terceiro).
+    O campo pago fica de fora — pode mudar entre exportações mensais.
+    """
+    nome = dados.get("nome_terceiro")
+    return (
+        dados["data_compra"],
+        dados["descricao"].strip(),
+        dados["categoria_id"],
+        dados["valor"].quantize(Decimal("0.01")),
+        nome.strip() if nome else None,
+    )
+
+
+def _montar_indice_deduplicacao(
+    registros: list[dict],
+) -> dict[tuple, deque[dict]]:
+    """Agrupa transações existentes por chave; fila suporta compras repetidas."""
+    indice: dict[tuple, deque[dict]] = defaultdict(deque)
+    for registro in registros:
+        indice[gerar_chave_deduplicacao(registro)].append(registro)
+    return indice
+
+
+def _resolver_data_linha(
+    row: pd.Series,
+    mapeamento: dict[str, str],
+    perfil: PerfilImportacao,
+    ultima_data_por_aba: dict[str, date],
+) -> date | None:
+    aba_mes = row["_aba_mes"] if "_aba_mes" in row.index else None
+    aba_ano = row["_aba_ano"] if "_aba_ano" in row.index else None
+    data_celula = _parse_data(_valor_celula(row, mapeamento.get("data")), perfil)
+
+    if data_celula:
+        if aba_mes is not None and not _celula_vazia(aba_mes):
+            ultima_data_por_aba[str(aba_mes)] = data_celula
+        return data_celula
+
+    if aba_mes is not None and not _celula_vazia(aba_mes):
+        chave_aba = str(aba_mes)
+        if chave_aba in ultima_data_por_aba:
+            return ultima_data_por_aba[chave_aba]
+        ano = None
+        if aba_ano is not None and not _celula_vazia(aba_ano):
+            ano = int(aba_ano)
+        return _data_primeiro_dia_mes(chave_aba, ano)
+
+    return None
+
+
+def _coletar_linhas_validas(
+    df: pd.DataFrame,
+    mapeamento: dict[str, str],
+    mapa_categorias: dict[str, int],
+    perfil: PerfilImportacao,
+) -> tuple[list[tuple[int, dict]], list[dict]]:
+    linhas_validas: list[tuple[int, dict]] = []
+    erros: list[dict] = []
+    ultima_data_por_aba: dict[str, date] = {}
+
+    for indice, row in df.iterrows():
+        numero_linha = int(indice) + 2
+        if _linha_vazia(row):
+            continue
+
+        data_resolvida = _resolver_data_linha(
+            row, mapeamento, perfil, ultima_data_por_aba
+        )
+        dados, erro = _validar_linha(
+            row,
+            numero_linha,
+            mapeamento,
+            mapa_categorias,
+            perfil,
+            data_resolvida=data_resolvida,
+        )
+        if erro:
+            erros.append({"linha": numero_linha, "mensagem": erro})
+            continue
+        linhas_validas.append((numero_linha, dados))
+
+    return linhas_validas, erros
+
+
+def _persistir_com_deduplicacao(
+    usuario_id: str,
+    linhas_validas: list[tuple[int, dict]],
+    indice: dict[tuple, deque[dict]],
+) -> tuple[int, int, int, list[dict]]:
+    """
+    Insere, atualiza ou ignora cada linha com base no índice de duplicatas.
+
+    Duplicata com pago=true → ignora; pago=false → atualiza; sem match → insere.
+    """
+    importadas = 0
+    atualizadas = 0
+    ignoradas = 0
+    erros: list[dict] = []
+
+    for numero_linha, dados in linhas_validas:
+        chave = gerar_chave_deduplicacao(dados)
+        fila = indice.get(chave)
+
+        try:
+            if fila:
+                existente = fila.popleft()
+                if existente["pago"]:
+                    ignoradas += 1
+                else:
+                    atualizar_transacao(
+                        usuario_id,
+                        existente["id"],
+                        data_compra=dados["data_compra"],
+                        descricao=dados["descricao"],
+                        categoria_id=dados["categoria_id"],
+                        valor=dados["valor"],
+                        pago=dados["pago"],
+                        pago_por_terceiro=dados["pago_por_terceiro"],
+                        nome_terceiro=dados["nome_terceiro"],
+                    )
+                    atualizadas += 1
+            else:
+                criar_transacao(usuario_id, origem="importacao", **dados)
+                importadas += 1
+        except CategoriaInvalidaError:
+            erros.append({"linha": numero_linha, "mensagem": "Categoria inválida."})
+        except TransacaoNaoEncontradaError:
+            erros.append({"linha": numero_linha, "mensagem": "Transação não encontrada."})
+
+    return importadas, atualizadas, ignoradas, erros
+
+
+def _resultado_importacao_vazio(
+    erros: list[dict] | None = None,
+    perfil: PerfilImportacao | None = None,
+) -> dict:
+    return {
+        "importadas": 0,
+        "atualizadas": 0,
+        "ignoradas": 0,
+        "erros": erros or [],
+        "perfil_usado": perfil.id if perfil else None,
+        "perfil_nome": perfil.nome if perfil else None,
+    }
 
 
 def _resolver_perfil(colunas, perfil_id: str) -> tuple[PerfilImportacao | None, str | None]:
@@ -570,6 +803,10 @@ def importar_transacoes(
 
             "importadas": int,
 
+            "atualizadas": int,
+
+            "ignoradas": int,
+
             "erros": [{"linha": int, "mensagem": str}, ...],
 
             "perfil_usado": str | None,
@@ -577,12 +814,6 @@ def importar_transacoes(
         }
 
     """
-
-    erros: list[dict] = []
-
-    importadas = 0
-
-
 
     # 1. Ler o arquivo
 
@@ -592,21 +823,21 @@ def importar_transacoes(
 
     except FormatoPlanilhaError as exc:
 
-        return {"importadas": 0, "erros": [{"linha": 0, "mensagem": str(exc)}], "perfil_usado": None}
+        return _resultado_importacao_vazio(
+
+            erros=[{"linha": 0, "mensagem": str(exc)}],
+
+        )
 
 
 
     if df.empty:
 
-        return {
+        return _resultado_importacao_vazio(
 
-            "importadas": 0,
+            erros=[{"linha": 0, "mensagem": "Planilha vazia."}],
 
-            "erros": [{"linha": 0, "mensagem": "Planilha vazia."}],
-
-            "perfil_usado": None,
-
-        }
+        )
 
 
 
@@ -616,15 +847,11 @@ def importar_transacoes(
 
     if erro_perfil:
 
-        return {
+        return _resultado_importacao_vazio(
 
-            "importadas": 0,
+            erros=[{"linha": 0, "mensagem": erro_perfil}],
 
-            "erros": [{"linha": 0, "mensagem": erro_perfil}],
-
-            "perfil_usado": None,
-
-        }
+        )
 
 
 
@@ -636,64 +863,74 @@ def importar_transacoes(
 
     except FormatoPlanilhaError as exc:
 
-        return {
+        return _resultado_importacao_vazio(
 
-            "importadas": 0,
+            erros=[{"linha": 0, "mensagem": str(exc)}],
 
-            "erros": [{"linha": 0, "mensagem": str(exc)}],
-
-            "perfil_usado": perfil.id,
-
-        }
-
-
-
-    # 4. Carregar categorias do banco uma vez (evita consulta por linha)
-
-    mapa_categorias = mapa_nome_para_id()
-
-
-
-    # 5. Processar linha a linha
-
-    for indice, row in df.iterrows():
-
-        # +2 porque: linha 1 é o cabeçalho, e o índice do pandas começa em 0
-
-        numero_linha = int(indice) + 2
-
-        if _linha_vazia(row):
-
-            continue
-
-
-
-        dados, erro = _validar_linha(
-
-            row, numero_linha, mapeamento, mapa_categorias, perfil
+            perfil=perfil,
 
         )
 
-        if erro:
-
-            erros.append({"linha": numero_linha, "mensagem": erro})
-
-            continue
 
 
+    # 4. Validar linhas e carregar categorias
 
-        try:
+    mapa_categorias = mapa_nome_para_id()
 
-            criar_transacao(usuario_id, origem="importacao", **dados)
+    linhas_validas, erros = _coletar_linhas_validas(
 
-            importadas += 1
+        df, mapeamento, mapa_categorias, perfil
 
-        except CategoriaInvalidaError:
-
-            erros.append({"linha": numero_linha, "mensagem": "Categoria inválida."})
+    )
 
 
 
-    return {"importadas": importadas, "erros": erros, "perfil_usado": perfil.id, "perfil_nome": perfil.nome}
+    if not linhas_validas:
+
+        return _resultado_importacao_vazio(erros=erros, perfil=perfil)
+
+
+
+    # 5. Carregar transações existentes em lote (margem de 31 dias)
+
+    datas = [dados["data_compra"] for _, dados in linhas_validas]
+
+    data_min = min(datas) - timedelta(days=31)
+
+    data_max = max(datas) + timedelta(days=31)
+
+    existentes = listar_para_deduplicacao(usuario_id, data_min, data_max)
+
+    indice = _montar_indice_deduplicacao(existentes)
+
+
+
+    # 6. Inserir, atualizar ou ignorar com deduplicação
+
+    importadas, atualizadas, ignoradas, erros_persistencia = _persistir_com_deduplicacao(
+
+        usuario_id, linhas_validas, indice
+
+    )
+
+    erros.extend(erros_persistencia)
+
+
+
+    return {
+
+        "importadas": importadas,
+
+        "atualizadas": atualizadas,
+
+        "ignoradas": ignoradas,
+
+        "erros": erros,
+
+        "perfil_usado": perfil.id,
+
+        "perfil_nome": perfil.nome,
+
+    }
 
 
