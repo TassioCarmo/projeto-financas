@@ -72,11 +72,19 @@ Resposta esperada (200):
 
 ```bash
 # Unitários (não exigem Postgres)
-pytest tests/test_health.py
+pytest tests/test_health.py tests/test_auth.py
 
 # Integração (exige docker compose up)
 pytest -m integration
 ```
+
+## Autenticação
+
+Após subir a aplicação, acesse:
+
+- Cadastro: `http://localhost:5000/auth/cadastro`
+- Login: `http://localhost:5000/auth/login`
+- Perfil (protegido): `http://localhost:5000/perfil`
 
 ## Estrutura do projeto
 
@@ -94,3 +102,4 @@ docs/            # Documentação por fase
 
 - [Fase 0 — Setup do Projeto](docs/fase-0.md)
 - [Fase 1 — Banco de dados mínimo](docs/fase-1.md)
+- [Fase 2 — Autenticação simples](docs/fase-2.md)
