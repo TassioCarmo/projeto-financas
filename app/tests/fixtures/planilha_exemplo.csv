@@ -1,0 +1,4 @@
+data,descricao,categoria,valor,pago,pago_por_terceiro,nome_terceiro
+2026-07-10,Supermercado,Alimentação,125.50,sim,nao,
+2026-07-11,Uber,Transporte,32.00,nao,nao,
+2026-07-12,,Alimentação,10.00,nao,nao,
