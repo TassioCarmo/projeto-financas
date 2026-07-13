@@ -1,0 +1,31 @@
+{# Macro de campo de formulário
+   Uso: {% from "components/_form_field.html" import form_field %}
+        {{ form_field("email", "Email", type="email", required=true) }}
+#}
+{% macro form_field(name, label_text, type="text", id="", value="", hint="", required=false, class="", attrs="") %}
+<div class="form-group">
+    <label for="{{ id or name }}">{{ label_text }}</label>
+    <input
+        type="{{ type }}"
+        id="{{ id or name }}"
+        name="{{ name }}"
+        class="form-control{% if class %} {{ class }}{% endif %}"
+        value="{{ value }}"
+        {% if required %}required{% endif %}
+        {{ attrs | safe }}
+    >
+    {% if hint %}<p class="hint">{{ hint }}</p>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro form_select(name, label_text, options=[], id="", selected="", hint="", required=false) %}
+<div class="form-group">
+    <label for="{{ id or name }}">{{ label_text }}</label>
+    <select id="{{ id or name }}" name="{{ name }}" class="form-control" {% if required %}required{% endif %}>
+        {% for opt in options %}
+        <option value="{{ opt.value }}" {% if opt.value == selected %}selected{% endif %}>{{ opt.label }}</option>
+        {% endfor %}
+    </select>
+    {% if hint %}<p class="hint">{{ hint }}</p>{% endif %}
+</div>
+{% endmacro %}

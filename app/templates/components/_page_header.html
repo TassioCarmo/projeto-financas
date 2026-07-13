@@ -1,0 +1,7 @@
+{# Cabeçalho de página #}
+{% macro page_header(title, description="") %}
+<header class="page-header">
+    <h1>{{ title }}</h1>
+    {% if description %}<p class="page-description">{{ description }}</p>{% endif %}
+</header>
+{% endmacro %}

@@ -1,0 +1,16 @@
+{# Macro de botão reutilizável
+   Uso: {% from "components/_button.html" import button %}
+        {{ button("Salvar", type="submit", variant="primary") }}
+#}
+{% macro button(label, type="button", variant="primary", size="", class="", id="", disabled=false) %}
+<button
+    type="{{ type }}"
+    class="btn btn-{{ variant }}{% if size %} btn-{{ size }}{% endif %}{% if class %} {{ class }}{% endif %}"
+    {% if id %}id="{{ id }}"{% endif %}
+    {% if disabled %}disabled{% endif %}
+>{{ label }}</button>
+{% endmacro %}
+
+{% macro link_button(label, href, variant="secondary", size="", class="") %}
+<a href="{{ href }}" class="btn btn-{{ variant }}{% if size %} btn-{{ size }}{% endif %}{% if class %} {{ class }}{% endif %}">{{ label }}</a>
+{% endmacro %}

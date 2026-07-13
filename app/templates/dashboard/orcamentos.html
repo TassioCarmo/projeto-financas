@@ -18,18 +18,20 @@
 <p id="vazio-orcamentos" class="vazio hidden">Nenhum orçamento definido para este mês.</p>
 
 <h2>Por categoria</h2>
-<table id="tabela-orcamentos">
-    <thead>
-        <tr>
-            <th>Categoria</th>
-            <th>Planejado</th>
-            <th>Gasto</th>
-            <th>Saldo</th>
-            <th>Uso</th>
-        </tr>
-    </thead>
-    <tbody></tbody>
-</table>
+<div class="table-wrapper">
+    <table class="table" id="tabela-orcamentos">
+        <thead>
+            <tr>
+                <th>Categoria</th>
+                <th>Planejado</th>
+                <th>Gasto</th>
+                <th>Saldo</th>
+                <th>Uso</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
 {% endblock %}
 
 {% block dashboard_scripts %}
@@ -37,12 +39,14 @@
 (function () {
     const anoMes = '{{ ano_mes }}';
     let chartOrcamentos = null;
+    let dadosCache = null;
 
     function preencherTabela(itens) {
         const tbody = document.querySelector('#tabela-orcamentos tbody');
         tbody.innerHTML = '';
         itens.forEach(function (item) {
             const pct = item.percentual_usado != null ? Math.min(item.percentual_usado, 100) : 0;
+            const overClass = item.percentual_usado > 100 ? ' over' : '';
             const tr = document.createElement('tr');
             tr.innerHTML =
                 '<td>' + item.categoria_nome + '</td>' +
@@ -51,13 +55,15 @@
                 '<td>' + formatarMoeda(item.saldo_restante) + '</td>' +
                 '<td>' +
                     (item.percentual_usado != null ? item.percentual_usado.toFixed(1) + '%' : '—') +
-                    '<div class="progress-bar"><span style="width:' + pct + '%"></span></div>' +
+                    '<div class="progress-bar' + overClass + '"><span style="width:' + pct + '%"></span></div>' +
                 '</td>';
             tbody.appendChild(tr);
         });
     }
 
     function renderizar(dados) {
+        dadosCache = dados;
+        const colors = getChartColors();
         const totais = dados.totais;
         document.getElementById('card-planejado').textContent = formatarMoeda(totais.valor_planejado);
         document.getElementById('card-gasto').textContent = formatarMoeda(totais.valor_gasto);
@@ -87,19 +93,18 @@
                     {
                         label: 'Planejado',
                         data: itens.map(function (i) { return i.valor_planejado; }),
-                        backgroundColor: '#4caf50'
+                        backgroundColor: colors.green
                     },
                     {
                         label: 'Gasto',
                         data: itens.map(function (i) { return i.valor_gasto; }),
-                        backgroundColor: '#f44336'
+                        backgroundColor: colors.red
                     }
                 ]
             },
-            options: {
-                responsive: true,
+            options: getChartOptions({
                 scales: { y: { beginAtZero: true } }
-            }
+            })
         });
     }
 
@@ -108,6 +113,10 @@
         fetchJson('/dashboard/orcamentos-resumo?ano_mes=' + encodeURIComponent(anoMes))
             .then(renderizar)
             .catch(function (err) { mostrarErro(err.message); });
+    });
+
+    window.addEventListener('themechange', function () {
+        if (dadosCache) renderizar(dadosCache);
     });
 })();
 </script>

@@ -1,17 +1,28 @@
-{% extends "base.html" %}
+{% extends "layouts/auth.html" %}
 
 {% block title %}Login — Finanças{% endblock %}
 
 {% block content %}
-<h1>Login</h1>
+<h1>Entrar</h1>
+<p class="auth-subtitle">Acesse sua conta para gerenciar suas finanças</p>
+
 <form method="POST" action="{{ url_for('auth.login') }}">
-    <label for="email">Email</label>
-    <input type="email" id="email" name="email" value="{{ email or '' }}" required>
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" class="form-control"
+               value="{{ email or '' }}" required autocomplete="email">
+    </div>
 
-    <label for="senha">Senha</label>
-    <input type="password" id="senha" name="senha" required>
+    <div class="form-group">
+        <label for="senha">Senha</label>
+        <input type="password" id="senha" name="senha" class="form-control"
+               required autocomplete="current-password">
+    </div>
 
-    <button type="submit">Entrar</button>
+    <button type="submit" class="btn btn-primary w-full">Entrar</button>
 </form>
-<p class="links">Não tem conta? <a href="{{ url_for('auth.cadastro') }}">Cadastre-se</a></p>
+
+<p class="auth-footer">
+    Não tem conta? <a href="{{ url_for('auth.cadastro') }}">Cadastre-se</a>
+</p>
 {% endblock %}

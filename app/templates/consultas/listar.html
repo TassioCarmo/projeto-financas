@@ -1,44 +1,46 @@
-{% extends "base.html" %}
+{% extends "layouts/app.html" %}
 
 {% block title %}Consultas — Finanças{% endblock %}
+{% block page_title %}Consultas{% endblock %}
 
 {% block content %}
-{% include "_nav_app.html" %}
+{% from "components/_page_header.html" import page_header %}
+{% from "components/_card.html" import card %}
+{% from "components/_badge.html" import badge %}
+{% from "components/_empty_state.html" import empty_state %}
 
-<style>
-    .subnav { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem; font-size: 0.9rem; }
-    .subnav a { text-decoration: none; color: #333; padding: 0.25rem 0.5rem; border-radius: 4px; }
-    .subnav a.ativo { background: #e8f0fe; font-weight: bold; }
-</style>
+{{ page_header("Consultas personalizadas", "Combine até " ~ max_condicoes ~ " filtros para buscar transações") }}
 
-<h1>Consultas personalizadas</h1>
 {% include "dashboard/_subnav.html" %}
-<p class="hint">Combine até {{ max_condicoes }} filtros para buscar transações. Todas as consultas ficam restritas às suas transações.</p>
 
-<h2>Construtor de filtros</h2>
-<form id="form-consultas" method="GET" action="{{ url_for('consultas.listar') }}" style="margin-bottom: 2rem;">
+<section class="page-section">
+{% call card("Construtor de filtros") %}
+<form id="form-consultas" method="GET" action="{{ url_for('consultas.listar') }}">
     <div id="filtros-container"></div>
 
-    <div class="form-grid" style="margin-top: 1rem;">
-        <div>
+    <div class="form-grid mt-2">
+        <div class="form-group">
             <label for="pagina">Página</label>
-            <input type="number" id="pagina" name="pagina" min="1"
+            <input type="number" id="pagina" name="pagina" class="form-control" min="1"
                    value="{{ paginacao.pagina if paginacao else 1 }}">
         </div>
-        <div>
+        <div class="form-group">
             <label for="por_pagina">Itens por página</label>
-            <input type="number" id="por_pagina" name="por_pagina" min="1" max="100"
+            <input type="number" id="por_pagina" name="por_pagina" class="form-control" min="1" max="100"
                    value="{{ paginacao.por_pagina if paginacao else 25 }}">
         </div>
     </div>
 
-    <div style="margin-top: 1rem;">
-        <button type="button" id="btn-adicionar-filtro">Adicionar filtro</button>
-        <button type="submit">Consultar</button>
-        <a href="{{ url_for('consultas.listar') }}" style="margin-left: 1rem;">Limpar</a>
+    <div class="form-actions">
+        <button type="button" id="btn-adicionar-filtro" class="btn btn-secondary">Adicionar filtro</button>
+        <button type="submit" class="btn btn-primary">Consultar</button>
+        <a href="{{ url_for('consultas.listar') }}" class="btn btn-ghost">Limpar</a>
     </div>
 </form>
+{% endcall %}
+</section>
 
+<section class="page-section">
 <h2>Resultados</h2>
 {% if paginacao and paginacao.total > 0 %}
 <p class="hint">
@@ -52,42 +54,47 @@
 {% endif %}
 
 {% if transacoes %}
-<table>
-    <thead>
-        <tr>
-            <th>Data</th>
-            <th>Descrição</th>
-            <th>Categoria</th>
-            <th>Valor</th>
-            <th>Pago</th>
-            <th>Terceiro</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for t in transacoes %}
-        <tr>
-            <td>{{ t.data_compra.strftime('%d/%m/%Y') if t.data_compra else t.data_compra }}</td>
-            <td>{{ t.descricao }}</td>
-            <td>{{ t.categoria_nome }}</td>
-            <td>R$ {{ '%.2f'|format(t.valor) }}</td>
-            <td>{{ 'Sim' if t.pago else 'Não' }}</td>
-            <td>{{ t.nome_terceiro or '—' }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="table-wrapper">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Descrição</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>Pago</th>
+                <th>Terceiro</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in transacoes %}
+            <tr>
+                <td>{{ t.data_compra.strftime('%d/%m/%Y') if t.data_compra else t.data_compra }}</td>
+                <td>{{ t.descricao }}</td>
+                <td>{{ t.categoria_nome }}</td>
+                <td>R$ {{ '%.2f'|format(t.valor) }}</td>
+                <td>
+                    {% if t.pago %}{{ badge("Sim", "success") }}{% else %}{{ badge("Não", "neutral") }}{% endif %}
+                </td>
+                <td>{{ t.nome_terceiro or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 {% if paginacao and paginacao.total_paginas > 1 %}
-<nav class="nav" style="margin-top: 1.5rem;">
+<nav class="pagination" aria-label="Paginação">
     {% if paginacao.pagina > 1 %}
-    <a id="link-pagina-anterior" href="#">Anterior</a>
+    <a id="link-pagina-anterior" href="#" class="btn btn-secondary btn-sm">Anterior</a>
     {% endif %}
     {% if paginacao.pagina < paginacao.total_paginas %}
-    <a id="link-pagina-proxima" href="#">Próxima</a>
+    <a id="link-pagina-proxima" href="#" class="btn btn-secondary btn-sm">Próxima</a>
     {% endif %}
 </nav>
 {% endif %}
 {% endif %}
+</section>
 {% endblock %}
 
 {% block scripts %}
@@ -141,6 +148,7 @@
     function criarSelectCampo(indice, valorAtual) {
         const select = document.createElement('select');
         select.name = 'f' + indice + '_campo';
+        select.className = 'form-control';
         select.required = true;
         select.innerHTML = '<option value="">Selecione</option>';
         CAMPOS.forEach(function (campo) {
@@ -156,6 +164,7 @@
     function criarSelectOperador(indice, campo, valorAtual) {
         const select = document.createElement('select');
         select.name = 'f' + indice + '_operador';
+        select.className = 'form-control';
         select.required = true;
         const operadores = OPERADORES_POR_CAMPO[campo] || [];
         operadores.forEach(function (op) {
@@ -171,6 +180,7 @@
     function criarInputValor(campo, operador, valorAtual) {
         if (campo === 'categoria' && operador === 'igual') {
             const select = document.createElement('select');
+            select.className = 'form-control';
             select.required = true;
             select.innerHTML = '<option value="">Selecione</option>';
             categorias.forEach(function (cat) {
@@ -185,6 +195,7 @@
 
         if (campo === 'pago' || campo === 'pago_por_terceiro') {
             const select = document.createElement('select');
+            select.className = 'form-control';
             select.required = true;
             select.innerHTML =
                 '<option value="">Selecione</option>' +
@@ -194,6 +205,7 @@
         }
 
         const input = document.createElement('input');
+        input.className = 'form-control';
         input.required = true;
         if (campo === 'data_compra') {
             input.type = 'date';
@@ -278,13 +290,12 @@
         const linha = document.createElement('div');
         linha.className = 'filtro-linha form-grid';
         linha.dataset.indice = indice;
-        linha.style.marginBottom = '1rem';
         linha.innerHTML =
-            '<div class="campo-container"><label>Campo</label></div>' +
-            '<div class="operador-container"><label>Operador</label></div>' +
-            '<div class="valor-container"><label>Valor</label></div>' +
-            '<div style="padding-top: 1.75rem;">' +
-            '<button type="button" class="btn-remover-filtro">Remover</button></div>';
+            '<div class="campo-container form-group"><label>Campo</label></div>' +
+            '<div class="operador-container form-group"><label>Operador</label></div>' +
+            '<div class="valor-container form-group"><label>Valor</label></div>' +
+            '<div class="form-group align-end">' +
+            '<button type="button" class="btn btn-danger btn-sm btn-remover-filtro">Remover</button></div>';
 
         container.appendChild(linha);
         atualizarLinha(linha, dados || {});

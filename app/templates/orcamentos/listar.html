@@ -1,115 +1,119 @@
-{% extends "base.html" %}
+{% extends "layouts/app.html" %}
 
 {% block title %}Orçamentos — Finanças{% endblock %}
+{% block page_title %}Orçamentos{% endblock %}
 
 {% block content %}
-{% include "_nav_app.html" %}
+{% from "components/_page_header.html" import page_header %}
+{% from "components/_card.html" import card %}
+{% from "components/_badge.html" import badge %}
+{% from "components/_empty_state.html" import empty_state %}
 
-<h1>Orçamentos</h1>
-<p class="hint">Defina quanto planeja gastar por categoria e acompanhe o uso no mês.</p>
+{{ page_header("Orçamentos", "Defina quanto planeja gastar por categoria e acompanhe o uso no mês") }}
 
-{# --- Filtro por mês (GET) --- #}
-<h2>Consultar mês</h2>
-<form method="GET" action="{{ url_for('orcamentos.listar') }}" style="margin-bottom: 2rem;">
+<section class="page-section">
+{% call card("Consultar mês") %}
+<form method="GET" action="{{ url_for('orcamentos.listar') }}">
     <div class="form-grid">
-        <div>
+        <div class="form-group">
             <label for="filtro_ano_mes">Mês</label>
-            <input type="month" id="filtro_ano_mes" name="ano_mes"
+            <input type="month" id="filtro_ano_mes" name="ano_mes" class="form-control"
                    value="{{ ano_mes }}" required>
             <p class="hint">Ex: julho/2026</p>
         </div>
-        <div style="padding-top: 1.75rem;">
-            <button type="submit">Filtrar</button>
+        <div class="form-group align-end">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
         </div>
     </div>
 </form>
+{% endcall %}
+</section>
 
-{# --- Formulário de cadastro/atualização (POST) --- #}
-<h2>Definir orçamento</h2>
-<p class="hint">Se categoria + mês já existir, o valor será atualizado (não duplica).</p>
+<section class="page-section">
+{% call card("Definir orçamento", "Se categoria + mês já existir, o valor será atualizado") %}
 <form method="POST" action="{{ url_for('orcamentos.salvar') }}">
     <div class="form-grid">
-        <div>
+        <div class="form-group">
             <label for="ano_mes">Mês</label>
-            <input type="month" id="ano_mes" name="ano_mes"
+            <input type="month" id="ano_mes" name="ano_mes" class="form-control"
                    value="{{ form.ano_mes if form else ano_mes }}" required>
         </div>
-        <div>
+        <div class="form-group">
             <label for="categoria_id">Categoria</label>
-            <select id="categoria_id" name="categoria_id" required>
+            <select id="categoria_id" name="categoria_id" class="form-control" required>
                 <option value="">Carregando...</option>
             </select>
         </div>
     </div>
 
-    <div class="form-grid">
-        <div>
-            <label for="valor_planejado">Valor planejado (R$)</label>
-            <input type="number" id="valor_planejado" name="valor_planejado"
-                   step="0.01" min="0"
-                   value="{{ form.valor_planejado if form else '' }}" required>
-            <p class="hint">Quanto você pretende gastar nesta categoria no mês</p>
-        </div>
+    <div class="form-group">
+        <label for="valor_planejado">Valor planejado (R$)</label>
+        <input type="number" id="valor_planejado" name="valor_planejado" class="form-control"
+               step="0.01" min="0"
+               value="{{ form.valor_planejado if form else '' }}" required>
+        <p class="hint">Quanto você pretende gastar nesta categoria no mês</p>
     </div>
 
-    <button type="submit">Salvar orçamento</button>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Salvar orçamento</button>
+    </div>
 </form>
+{% endcall %}
+</section>
 
-{# --- Tabela de status: planejado vs. gasto real --- #}
+<section class="page-section">
 <h2>Status de {{ ano_mes }}</h2>
-
 {% if status %}
-<table>
-    <thead>
-        <tr>
-            <th>Categoria</th>
-            <th>Planejado</th>
-            <th>Gasto real</th>
-            <th>% usado</th>
-            <th>Saldo</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for s in status %}
-        <tr>
-            <td>{{ s.categoria_nome }}</td>
-            <td>R$ {{ "%.2f"|format(s.valor_planejado) }}</td>
-            <td>R$ {{ "%.2f"|format(s.valor_gasto) }}</td>
-            <td>
-                {% if s.percentual_usado is not none %}
-                    {% if s.percentual_usado > 100 %}
-                        <span style="color: #c0392b; font-weight: bold;">
+<div class="table-wrapper">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Categoria</th>
+                <th>Planejado</th>
+                <th>Gasto real</th>
+                <th>% usado</th>
+                <th>Saldo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in status %}
+            <tr>
+                <td>{{ s.categoria_nome }}</td>
+                <td>R$ {{ "%.2f"|format(s.valor_planejado) }}</td>
+                <td>R$ {{ "%.2f"|format(s.valor_gasto) }}</td>
+                <td>
+                    {% if s.percentual_usado is not none %}
+                        {% if s.percentual_usado > 100 %}
+                            {{ badge("%.1f"|format(s.percentual_usado) ~ "%", "danger") }}
+                        {% elif s.percentual_usado > 80 %}
+                            {{ badge("%.1f"|format(s.percentual_usado) ~ "%", "warning") }}
+                        {% else %}
                             {{ "%.1f"|format(s.percentual_usado) }}%
-                        </span>
+                        {% endif %}
                     {% else %}
-                        {{ "%.1f"|format(s.percentual_usado) }}%
+                        —
                     {% endif %}
-                {% else %}
-                    —
-                {% endif %}
-            </td>
-            <td>
-                {% if s.saldo_restante < 0 %}
-                    <span style="color: #c0392b;">
+                </td>
+                <td>
+                    {% if s.saldo_restante < 0 %}
+                        <span class="text-danger font-bold">R$ {{ "%.2f"|format(s.saldo_restante) }}</span>
+                    {% else %}
                         R$ {{ "%.2f"|format(s.saldo_restante) }}
-                    </span>
-                {% else %}
-                    R$ {{ "%.2f"|format(s.saldo_restante) }}
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% else %}
-<p class="hint">Nenhum orçamento definido para {{ ano_mes }}. Use o formulário acima.</p>
+{{ empty_state("Nenhum orçamento definido para " ~ ano_mes ~ ". Use o formulário acima.") }}
 {% endif %}
-
+</section>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Carrega categorias ativas no select (mesmo padrão da tela de transações)
     fetch('/categorias')
         .then(resp => resp.json())
         .then(categorias => {

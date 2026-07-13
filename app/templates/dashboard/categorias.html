@@ -15,17 +15,19 @@
 <p id="vazio-categorias" class="vazio hidden">Nenhum gasto por categoria neste período.</p>
 
 <h2>Detalhamento</h2>
-<table id="tabela-categorias">
-    <thead>
-        <tr>
-            <th>Categoria</th>
-            <th>Total</th>
-            <th>Qtd</th>
-            <th>%</th>
-        </tr>
-    </thead>
-    <tbody></tbody>
-</table>
+<div class="table-wrapper">
+    <table class="table" id="tabela-categorias">
+        <thead>
+            <tr>
+                <th>Categoria</th>
+                <th>Total</th>
+                <th>Qtd</th>
+                <th>%</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
 {% endblock %}
 
 {% block dashboard_scripts %}
@@ -51,6 +53,7 @@
     }
 
     function renderizar(itens) {
+        const colors = getChartColors();
         const ctx = document.getElementById('chart-categorias');
         const vazio = document.getElementById('vazio-categorias');
         if (!itens || itens.length === 0) {
@@ -70,13 +73,10 @@
                 labels: itens.map(function (i) { return i.categoria_nome; }),
                 datasets: [{
                     data: itens.map(function (i) { return i.total; }),
-                    backgroundColor: [
-                        '#4caf50', '#2196f3', '#ff9800', '#9c27b0', '#f44336',
-                        '#00bcd4', '#795548', '#607d8b', '#e91e63', '#3f51b5'
-                    ]
+                    backgroundColor: colors.palette
                 }]
             },
-            options: { responsive: true }
+            options: getChartOptions()
         });
     }
 
@@ -107,6 +107,8 @@
             })
             .catch(function (err) { mostrarErro(err.message); });
     });
+
+    window.addEventListener('themechange', atualizarVisao);
 })();
 </script>
 {% endblock %}

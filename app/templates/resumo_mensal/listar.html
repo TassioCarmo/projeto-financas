@@ -1,116 +1,122 @@
-{% extends "base.html" %}
+{% extends "layouts/app.html" %}
 
 {% block title %}Resumo mensal — Finanças{% endblock %}
+{% block page_title %}Resumo mensal{% endblock %}
 
 {% block content %}
-{% include "_nav_app.html" %}
+{% from "components/_page_header.html" import page_header %}
+{% from "components/_card.html" import card %}
+{% from "components/_empty_state.html" import empty_state %}
 
-<h1>Resumo mensal</h1>
-<p class="hint">Registre renda, investimentos, rendimentos e patrimônio mês a mês.</p>
+{{ page_header("Resumo mensal", "Registre renda, investimentos, rendimentos e patrimônio mês a mês") }}
 
-{# --- Filtro por ano (GET) --- #}
-<h2>Consultar ano</h2>
-<form method="GET" action="{{ url_for('resumo_mensal.listar') }}" style="margin-bottom: 2rem;">
+<section class="page-section">
+{% call card("Consultar ano") %}
+<form method="GET" action="{{ url_for('resumo_mensal.listar') }}">
     <div class="form-grid">
-        <div>
+        <div class="form-group">
             <label for="ano">Ano</label>
-            <input type="number" id="ano" name="ano" min="2000" max="2100"
+            <input type="number" id="ano" name="ano" class="form-control" min="2000" max="2100"
                    value="{{ ano }}" required>
         </div>
-        <div style="padding-top: 1.75rem;">
-            <button type="submit">Filtrar</button>
+        <div class="form-group align-end">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
         </div>
     </div>
 </form>
+{% endcall %}
+</section>
 
-{# --- Formulário de cadastro/atualização (POST) --- #}
-<h2>Registrar mês</h2>
-<p class="hint">Se o mês já existir, os dados serão atualizados (não duplica).</p>
+<section class="page-section">
+{% call card("Registrar mês", "Se o mês já existir, os dados serão atualizados") %}
 <form method="POST" action="{{ url_for('resumo_mensal.salvar') }}">
     <div class="form-grid">
-        <div>
+        <div class="form-group">
             <label for="ano_mes">Mês</label>
-            <input type="month" id="ano_mes" name="ano_mes"
+            <input type="month" id="ano_mes" name="ano_mes" class="form-control"
                    value="{{ form.ano_mes if form else '' }}" required>
             <p class="hint">Ex: julho/2026</p>
         </div>
-        <div>
+        <div class="form-group">
             <label for="renda">Renda (R$)</label>
-            <input type="number" id="renda" name="renda" step="0.01" min="0"
+            <input type="number" id="renda" name="renda" class="form-control" step="0.01" min="0"
                    value="{{ form.renda if form else '' }}" required>
             <p class="hint">Quanto você ganhou no mês</p>
         </div>
     </div>
 
     <div class="form-grid">
-        <div>
+        <div class="form-group">
             <label for="investimento">Investimento (R$)</label>
-            <input type="number" id="investimento" name="investimento" step="0.01" min="0"
+            <input type="number" id="investimento" name="investimento" class="form-control" step="0.01" min="0"
                    value="{{ form.investimento if form else '' }}" required>
             <p class="hint">Valor aportado/investido no mês</p>
         </div>
-        <div>
+        <div class="form-group">
             <label for="rendimentos">Rendimentos (R$)</label>
-            <input type="number" id="rendimentos" name="rendimentos" step="0.01" min="0"
+            <input type="number" id="rendimentos" name="rendimentos" class="form-control" step="0.01" min="0"
                    value="{{ form.rendimentos if form else '' }}" required>
             <p class="hint">Juros, dividendos etc. recebidos no mês</p>
         </div>
     </div>
 
-    <div class="form-grid">
-        <div>
-            <label for="patrimonio">Patrimônio manual (R$) — opcional</label>
-            <input type="number" id="patrimonio" name="patrimonio" step="0.01" min="0"
-                   value="{{ form.patrimonio if form and form.patrimonio else '' }}">
-            <p class="hint">Se preenchido, guarda seu valor; o sistema calcula a sugestão separadamente.</p>
-        </div>
+    <div class="form-group">
+        <label for="patrimonio">Patrimônio manual (R$) — opcional</label>
+        <input type="number" id="patrimonio" name="patrimonio" class="form-control" step="0.01" min="0"
+               value="{{ form.patrimonio if form and form.patrimonio else '' }}">
+        <p class="hint">Se preenchido, guarda seu valor; o sistema calcula a sugestão separadamente.</p>
     </div>
 
-    <button type="submit">Salvar mês</button>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Salvar mês</button>
+    </div>
 </form>
+{% endcall %}
+</section>
 
-{# --- Tabela de histórico do ano --- #}
+<section class="page-section">
 <h2>Histórico de {{ ano }}</h2>
-
 {% if resumos %}
-<table>
-    <thead>
-        <tr>
-            <th>Mês</th>
-            <th>Renda</th>
-            <th>Investimento</th>
-            <th>Rendimentos</th>
-            <th>Patrimônio (manual)</th>
-            <th>Patrimônio sugerido</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for r in resumos %}
-        <tr>
-            <td>{{ r.ano_mes }}</td>
-            <td>R$ {{ "%.2f"|format(r.renda) }}</td>
-            <td>R$ {{ "%.2f"|format(r.investimento) }}</td>
-            <td>R$ {{ "%.2f"|format(r.rendimentos) }}</td>
-            <td>
-                {% if r.patrimonio is not none %}
-                    R$ {{ "%.2f"|format(r.patrimonio) }}
-                {% else %}
-                    —
-                {% endif %}
-            </td>
-            <td>
-                {% if r.patrimonio_sugerido is not none %}
-                    R$ {{ "%.2f"|format(r.patrimonio_sugerido) }}
-                {% else %}
-                    —
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="table-wrapper">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Mês</th>
+                <th>Renda</th>
+                <th>Investimento</th>
+                <th>Rendimentos</th>
+                <th>Patrimônio (manual)</th>
+                <th>Patrimônio sugerido</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in resumos %}
+            <tr>
+                <td>{{ r.ano_mes }}</td>
+                <td>R$ {{ "%.2f"|format(r.renda) }}</td>
+                <td>R$ {{ "%.2f"|format(r.investimento) }}</td>
+                <td>R$ {{ "%.2f"|format(r.rendimentos) }}</td>
+                <td>
+                    {% if r.patrimonio is not none %}
+                        R$ {{ "%.2f"|format(r.patrimonio) }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>
+                    {% if r.patrimonio_sugerido is not none %}
+                        R$ {{ "%.2f"|format(r.patrimonio_sugerido) }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% else %}
-<p class="hint">Nenhum mês registrado para {{ ano }}. Use o formulário acima.</p>
+{{ empty_state("Nenhum mês registrado para " ~ ano ~ ". Use o formulário acima.") }}
 {% endif %}
-
+</section>
 {% endblock %}

@@ -1,85 +1,110 @@
-{% extends "base.html" %}
+{% extends "layouts/app.html" %}
 
 {% block title %}Transações — Finanças{% endblock %}
+{% block page_title %}Transações{% endblock %}
 
 {% block content %}
-{% include "_nav_app.html" %}
+{% from "components/_page_header.html" import page_header %}
+{% from "components/_card.html" import card %}
+{% from "components/_badge.html" import badge %}
+{% from "components/_empty_state.html" import empty_state %}
 
-<h1>Transações</h1>
+{{ page_header("Transações", "Cadastre gastos, importe planilhas e gerencie suas transações") }}
 
-<h2>Novo gasto</h2>
+{# --- Novo gasto --- #}
+<section class="page-section">
+{% call card("Novo gasto") %}
 <form id="form-cadastro" method="POST" action="{{ url_for('transacoes.criar') }}">
     <div class="form-grid">
-        <div>
+        <div class="form-group">
             <label for="data_compra">Data</label>
-            <input type="date" id="data_compra" name="data_compra"
+            <input type="date" id="data_compra" name="data_compra" class="form-control"
                    value="{{ form.data_compra if form else '' }}" required>
         </div>
-        <div>
+        <div class="form-group">
             <label for="categoria_id">Categoria</label>
-            <select id="categoria_id" name="categoria_id" required>
+            <select id="categoria_id" name="categoria_id" class="form-control" required>
                 <option value="">Carregando...</option>
             </select>
         </div>
     </div>
 
-    <label for="descricao">Descrição</label>
-    <input type="text" id="descricao" name="descricao"
-           value="{{ form.descricao if form else '' }}" required>
+    <div class="form-group">
+        <label for="descricao">Descrição</label>
+        <input type="text" id="descricao" name="descricao" class="form-control"
+               value="{{ form.descricao if form else '' }}" required>
+    </div>
 
     <div class="form-grid">
-        <div>
+        <div class="form-group">
             <label for="valor">Valor</label>
-            <input type="number" id="valor" name="valor" step="0.01" min="0.01"
+            <input type="number" id="valor" name="valor" class="form-control" step="0.01" min="0.01"
                    value="{{ form.valor if form else '' }}" required>
         </div>
-        <div style="padding-top: 1.75rem;">
-            <label>
-                <input type="checkbox" id="pago" name="pago" value="true"
-                       {% if form and form.pago %}checked{% endif %}>
-                Pago
-            </label>
-            <label>
-                <input type="checkbox" id="pago_por_terceiro" name="pago_por_terceiro" value="true"
-                       {% if form and form.pago_por_terceiro %}checked{% endif %}>
-                Pago por terceiro
-            </label>
+        <div class="form-group">
+            <label>Opções</label>
+            <div class="checkbox-group">
+                <label>
+                    <input type="checkbox" id="pago" name="pago" value="true"
+                           {% if form and form.pago %}checked{% endif %}>
+                    Pago
+                </label>
+                <label>
+                    <input type="checkbox" id="pago_por_terceiro" name="pago_por_terceiro" value="true"
+                           {% if form and form.pago_por_terceiro %}checked{% endif %}>
+                    Pago por terceiro
+                </label>
+            </div>
         </div>
     </div>
 
-    <div id="nome_terceiro_cadastro" class="{% if not form or not form.pago_por_terceiro %}hidden{% endif %}">
+    <div id="nome_terceiro_cadastro" class="form-group {% if not form or not form.pago_por_terceiro %}hidden{% endif %}">
         <label for="nome_terceiro">Nome do terceiro</label>
-        <input type="text" id="nome_terceiro" name="nome_terceiro"
+        <input type="text" id="nome_terceiro" name="nome_terceiro" class="form-control"
                value="{{ form.nome_terceiro if form and form.nome_terceiro else '' }}">
     </div>
 
-    <button type="submit">Salvar</button>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+    </div>
 </form>
+{% endcall %}
+</section>
 
-<h2>Importar planilha</h2>
-<!-- Upload de planilha: envia arquivo para POST /transacoes/importar -->
+{# --- Importar planilha --- #}
+<section class="page-section">
+{% call card("Importar planilha", "Envie arquivos .csv ou .xlsx para importação em lote") %}
 <form method="POST" action="{{ url_for('transacoes.importar') }}" enctype="multipart/form-data">
-    <label for="perfil">Perfil de importação</label>
-    <select id="perfil" name="perfil">
-        <option value="auto">Detectar automaticamente</option>
-        {% for perfil in perfis_importacao %}
-        <option value="{{ perfil.id }}">{{ perfil.nome }}</option>
-        {% endfor %}
-    </select>
-    <label for="arquivo">Arquivo (.csv ou .xlsx)</label>
-    <input type="file" id="arquivo" name="arquivo" accept=".xlsx,.csv" required>
-    <button type="submit">Importar</button>
+    <div class="form-grid">
+        <div class="form-group">
+            <label for="perfil">Perfil de importação</label>
+            <select id="perfil" name="perfil" class="form-control">
+                <option value="auto">Detectar automaticamente</option>
+                {% for perfil in perfis_importacao %}
+                <option value="{{ perfil.id }}">{{ perfil.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="arquivo">Arquivo (.csv ou .xlsx)</label>
+            <input type="file" id="arquivo" name="arquivo" class="form-control" accept=".xlsx,.csv" required>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Importar</button>
+    </div>
 </form>
-<p class="hint">
+<p class="hint mt-2">
     Perfis disponíveis:
     {% for perfil in perfis_importacao %}
     <strong>{{ perfil.nome }}</strong> — {{ perfil.descricao }}{% if not loop.last %}; {% endif %}
     {% endfor %}
     Categorias do perfil Padrão devem corresponder às cadastradas no sistema.
 </p>
+{% endcall %}
+</section>
 
 {% if resultado_importacao %}
-<!-- Resumo da importação: preenchido via session após redirect -->
 <div class="importacao-resumo">
     <p>
         {{ resultado_importacao.importadas }} transação(ões) importada(s),
@@ -91,152 +116,165 @@
         {% endif %}
     </p>
     {% if resultado_importacao.erros %}
-    <table>
-        <thead>
-            <tr>
-                <th>Linha</th>
-                <th>Erro</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for erro in resultado_importacao.erros %}
-            <tr>
-                <td>{{ erro.linha if erro.linha > 0 else '—' }}</td>
-                <td>{{ erro.mensagem }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-wrapper mt-2">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Linha</th>
+                    <th>Erro</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for erro in resultado_importacao.erros %}
+                <tr>
+                    <td>{{ erro.linha if erro.linha > 0 else '—' }}</td>
+                    <td>{{ erro.mensagem }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% endif %}
 </div>
 {% endif %}
 
-{# --- Filtros da listagem (GET) --- #}
-<h2>Filtrar transações</h2>
-<form method="GET" action="{{ url_for('transacoes.listar') }}" style="margin-bottom: 2rem;">
+{# --- Filtros --- #}
+<section class="page-section">
+{% call card("Filtrar transações") %}
+<form method="GET" action="{{ url_for('transacoes.listar') }}">
     <div class="form-grid">
-        <div>
+        <div class="form-group">
             <label for="filtro_data_inicio">Data início</label>
-            <input type="date" id="filtro_data_inicio" name="data_inicio"
+            <input type="date" id="filtro_data_inicio" name="data_inicio" class="form-control"
                    value="{{ filtros.data_inicio if filtros else '' }}">
         </div>
-        <div>
+        <div class="form-group">
             <label for="filtro_data_fim">Data fim</label>
-            <input type="date" id="filtro_data_fim" name="data_fim"
+            <input type="date" id="filtro_data_fim" name="data_fim" class="form-control"
                    value="{{ filtros.data_fim if filtros else '' }}">
         </div>
     </div>
     <div class="form-grid">
-        <div>
+        <div class="form-group">
             <label for="filtro_categoria_id">Categoria</label>
-            <select id="filtro_categoria_id" name="categoria_id">
+            <select id="filtro_categoria_id" name="categoria_id" class="form-control">
                 <option value="">Todas</option>
             </select>
         </div>
-        <div>
+        <div class="form-group">
             <label for="filtro_pago">Pago</label>
-            <select id="filtro_pago" name="pago">
+            <select id="filtro_pago" name="pago" class="form-control">
                 <option value="" {% if not filtros or not filtros.pago %}selected{% endif %}>Todos</option>
                 <option value="true" {% if filtros and filtros.pago == 'true' %}selected{% endif %}>Sim</option>
                 <option value="false" {% if filtros and filtros.pago == 'false' %}selected{% endif %}>Não</option>
             </select>
         </div>
     </div>
-    <button type="submit">Filtrar</button>
-    <a href="{{ url_for('transacoes.listar') }}" style="margin-left: 1rem;">Limpar filtros</a>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+        <a href="{{ url_for('transacoes.listar') }}" class="btn btn-ghost">Limpar filtros</a>
+    </div>
 </form>
+{% endcall %}
+</section>
 
+{# --- Listagem --- #}
+<section class="page-section">
 <h2>Minhas transações</h2>
 {% if transacoes %}
-<table>
-    <thead>
-        <tr>
-            <th>Data</th>
-            <th>Descrição</th>
-            <th>Categoria</th>
-            <th>Valor</th>
-            <th>Pago</th>
-            <th>Terceiro</th>
-            <th>Ações</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for t in transacoes %}
-        <tr class="view-row" data-id="{{ t.id }}">
-            <td>{{ t.data_compra.strftime('%d/%m/%Y') if t.data_compra else t.data_compra }}</td>
-            <td>{{ t.descricao }}</td>
-            <td>{{ t.categoria_nome }}</td>
-            <td>R$ {{ '%.2f'|format(t.valor) }}</td>
-            <td>{{ 'Sim' if t.pago else 'Não' }}</td>
-            <td>{{ t.nome_terceiro or '—' }}</td>
-            <td class="acoes">
-                <button type="button" class="btn-editar">Editar</button>
-                <button type="button" class="btn-excluir">Excluir</button>
-            </td>
-        </tr>
-        <tr class="edit-row hidden" data-id="{{ t.id }}">
-            <td colspan="7">
-                <form class="form-editar">
-                    <div class="form-grid">
-                        <div>
-                            <label>Data</label>
-                            <input type="date" name="data_compra"
-                                   value="{{ t.data_compra.isoformat() if t.data_compra else '' }}" required>
+<div class="table-wrapper">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Descrição</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>Pago</th>
+                <th>Terceiro</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in transacoes %}
+            <tr class="view-row" data-id="{{ t.id }}">
+                <td>{{ t.data_compra.strftime('%d/%m/%Y') if t.data_compra else t.data_compra }}</td>
+                <td>{{ t.descricao }}</td>
+                <td>{{ t.categoria_nome }}</td>
+                <td>R$ {{ '%.2f'|format(t.valor) }}</td>
+                <td>
+                    {% if t.pago %}{{ badge("Sim", "success") }}{% else %}{{ badge("Não", "neutral") }}{% endif %}
+                </td>
+                <td>{{ t.nome_terceiro or '—' }}</td>
+                <td class="acoes">
+                    <button type="button" class="btn btn-secondary btn-sm btn-editar">Editar</button>
+                    <button type="button" class="btn btn-danger btn-sm btn-excluir">Excluir</button>
+                </td>
+            </tr>
+            <tr class="edit-row hidden" data-id="{{ t.id }}">
+                <td colspan="7">
+                    <form class="form-editar">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Data</label>
+                                <input type="date" name="data_compra" class="form-control"
+                                       value="{{ t.data_compra.isoformat() if t.data_compra else '' }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Categoria</label>
+                                <select name="categoria_id" class="form-control select-categoria" required
+                                        data-selected="{{ t.categoria_id }}">
+                                    <option value="">Carregando...</option>
+                                </select>
+                            </div>
                         </div>
-                        <div>
-                            <label>Categoria</label>
-                            <select name="categoria_id" class="select-categoria" required
-                                    data-selected="{{ t.categoria_id }}">
-                                <option value="">Carregando...</option>
-                            </select>
+                        <div class="form-group">
+                            <label>Descrição</label>
+                            <input type="text" name="descricao" class="form-control" value="{{ t.descricao }}" required>
                         </div>
-                    </div>
-                    <label>Descrição</label>
-                    <input type="text" name="descricao" value="{{ t.descricao }}" required>
-                    <div class="form-grid">
-                        <div>
-                            <label>Valor</label>
-                            <input type="number" name="valor" step="0.01" min="0.01"
-                                   value="{{ t.valor }}" required>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Valor</label>
+                                <input type="number" name="valor" class="form-control" step="0.01" min="0.01"
+                                       value="{{ t.valor }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Opções</label>
+                                <div class="checkbox-group">
+                                    <label>
+                                        <input type="checkbox" name="pago" value="true"
+                                               {% if t.pago %}checked{% endif %}>
+                                        Pago
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" name="pago_por_terceiro" value="true"
+                                               class="chk-terceiro"
+                                               {% if t.pago_por_terceiro %}checked{% endif %}>
+                                        Pago por terceiro
+                                    </label>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label>
-                                <input type="checkbox" name="pago" value="true"
-                                       {% if t.pago %}checked{% endif %}>
-                                Pago
-                            </label>
-                            <label>
-                                <input type="checkbox" name="pago_por_terceiro" value="true"
-                                       class="chk-terceiro"
-                                       {% if t.pago_por_terceiro %}checked{% endif %}>
-                                Pago por terceiro
-                            </label>
+                        <div class="form-group campo-terceiro {% if not t.pago_por_terceiro %}hidden{% endif %}">
+                            <label>Nome do terceiro</label>
+                            <input type="text" name="nome_terceiro" class="form-control"
+                                   value="{{ t.nome_terceiro or '' }}">
                         </div>
-                    </div>
-                    <div class="campo-terceiro {% if not t.pago_por_terceiro %}hidden{% endif %}">
-                        <label>Nome do terceiro</label>
-                        <input type="text" name="nome_terceiro"
-                               value="{{ t.nome_terceiro or '' }}">
-                    </div>
-                    <div class="acoes">
-                        <button type="submit">Salvar</button>
-                        <button type="button" class="btn-cancelar">Cancelar</button>
-                    </div>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary btn-sm">Salvar</button>
+                            <button type="button" class="btn btn-ghost btn-sm btn-cancelar">Cancelar</button>
+                        </div>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% else %}
-<p>
-    {% if filtros_ativos %}
-        Nenhuma transação encontrada com os filtros aplicados.
-    {% else %}
-        Nenhuma transação cadastrada.
-    {% endif %}
-</p>
+{{ empty_state("Nenhuma transação encontrada com os filtros aplicados." if filtros_ativos else "Nenhuma transação cadastrada. Use o formulário acima para adicionar.") }}
 {% endif %}
+</section>
 {% endblock %}
 
 {% block scripts %}

@@ -27,9 +27,13 @@
     const anoMes = '{{ ano_mes }}';
     let chartFluxo = null;
     let chartPatrimonio = null;
+    let dadosFluxo = null;
+    let dadosPatrimonio = null;
 
     function renderFluxo(dados) {
+        dadosFluxo = dados;
         const mes = dados.mes;
+        const colors = getChartColors();
         document.getElementById('card-entrou').textContent = formatarMoeda(mes.entrou);
         document.getElementById('card-saiu').textContent = formatarMoeda(mes.saiu);
         document.getElementById('card-saldo').textContent = formatarMoeda(mes.saldo);
@@ -51,18 +55,19 @@
                 datasets: [{
                     label: 'R$',
                     data: [mes.entrou, mes.saiu, mes.saldo],
-                    backgroundColor: ['#4caf50', '#f44336', '#2196f3']
+                    backgroundColor: [colors.green, colors.red, colors.blue]
                 }]
             },
-            options: {
-                responsive: true,
+            options: getChartOptions({
                 plugins: { legend: { display: false } },
                 scales: { y: { beginAtZero: true } }
-            }
+            })
         });
     }
 
     function renderPatrimonio(dados) {
+        dadosPatrimonio = dados;
+        const colors = getChartColors();
         const serie = dados.serie || [];
         const ctx = document.getElementById('chart-patrimonio');
         const vazio = document.getElementById('vazio-patrimonio');
@@ -82,20 +87,19 @@
                 datasets: [{
                     label: 'Patrimônio',
                     data: comValor.map(function (p) { return p.patrimonio_efetivo; }),
-                    borderColor: '#673ab7',
-                    backgroundColor: 'rgba(103, 58, 183, 0.1)',
+                    borderColor: colors.purple,
+                    backgroundColor: colors.purple + '1a',
                     fill: true,
                     tension: 0.2
                 }]
             },
-            options: {
-                responsive: true,
+            options: getChartOptions({
                 scales: { y: { beginAtZero: true } }
-            }
+            })
         });
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
+    function carregarDados() {
         esconderErro();
         Promise.all([
             fetchJson('/dashboard/fluxo-caixa?ano_mes=' + encodeURIComponent(anoMes)),
@@ -106,6 +110,13 @@
         }).catch(function (err) {
             mostrarErro(err.message);
         });
+    }
+
+    document.addEventListener('DOMContentLoaded', carregarDados);
+
+    window.addEventListener('themechange', function () {
+        if (dadosFluxo) renderFluxo(dadosFluxo);
+        if (dadosPatrimonio) renderPatrimonio(dadosPatrimonio);
     });
 })();
 </script>

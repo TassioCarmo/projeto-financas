@@ -1,0 +1,26 @@
+{# Macro de card
+   Uso: {% from "components/_card.html" import card %}
+        {% call card("Título", "Subtítulo opcional") %}
+            conteúdo aqui
+        {% endcall %}
+#}
+{% macro card(title="", subtitle="", class="") %}
+<div class="card{% if class %} {{ class }}{% endif %}">
+    {% if title %}
+    <div class="card-header">
+        <h2>{{ title }}</h2>
+        {% if subtitle %}<p class="hint">{{ subtitle }}</p>{% endif %}
+    </div>
+    {% endif %}
+    <div class="card-body">
+        {{ caller() }}
+    </div>
+</div>
+{% endmacro %}
+
+{% macro card_metric(label, value, class="") %}
+<div class="card card-metric{% if class %} {{ class }}{% endif %}">
+    <div class="metric-label">{{ label }}</div>
+    <div class="metric-value">{{ value }}</div>
+</div>
+{% endmacro %}

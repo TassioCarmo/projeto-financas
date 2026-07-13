@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block body_class %}app-body{% endblock %}
+
+{% block body %}
+<div class="app-shell">
+    <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
+
+    {% include "components/_sidebar.html" %}
+
+    <div class="app-main">
+        <header class="app-header">
+            <div class="app-header-left">
+                <button type="button" id="menu-toggle" class="menu-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="sidebar">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+                <h1 class="app-header-title">{% block page_title %}Finanças{% endblock %}</h1>
+            </div>
+            <div class="app-header-right">
+                {% if session.usuario_nome %}
+                <div class="header-user">
+                    <span class="avatar" aria-hidden="true">{{ session.usuario_nome[0] | upper }}</span>
+                    <span class="header-user-name">{{ session.usuario_nome }}</span>
+                </div>
+                {% endif %}
+                {% include "components/_theme_toggle.html" %}
+            </div>
+        </header>
+
+        <main id="main-content" class="app-content">
+            {% include "components/_alert.html" %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/nav.js') }}"></script>
+{% endblock %}

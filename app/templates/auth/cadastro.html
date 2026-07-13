@@ -1,20 +1,35 @@
-{% extends "base.html" %}
+{% extends "layouts/auth.html" %}
 
 {% block title %}Cadastro — Finanças{% endblock %}
 
 {% block content %}
-<h1>Cadastro</h1>
+<h1>Criar conta</h1>
+<p class="auth-subtitle">Comece a organizar suas finanças pessoais</p>
+
 <form method="POST" action="{{ url_for('auth.cadastro') }}">
-    <label for="nome">Nome</label>
-    <input type="text" id="nome" name="nome" value="{{ nome or '' }}" required>
+    <div class="form-group">
+        <label for="nome">Nome</label>
+        <input type="text" id="nome" name="nome" class="form-control"
+               value="{{ nome or '' }}" required autocomplete="name">
+    </div>
 
-    <label for="email">Email</label>
-    <input type="email" id="email" name="email" value="{{ email or '' }}" required>
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" class="form-control"
+               value="{{ email or '' }}" required autocomplete="email">
+    </div>
 
-    <label for="senha">Senha</label>
-    <input type="password" id="senha" name="senha" required minlength="6">
+    <div class="form-group">
+        <label for="senha">Senha</label>
+        <input type="password" id="senha" name="senha" class="form-control"
+               required minlength="6" autocomplete="new-password">
+        <p class="hint">Mínimo de 6 caracteres</p>
+    </div>
 
-    <button type="submit">Cadastrar</button>
+    <button type="submit" class="btn btn-primary w-full">Cadastrar</button>
 </form>
-<p class="links">Já tem conta? <a href="{{ url_for('auth.login') }}">Faça login</a></p>
+
+<p class="auth-footer">
+    Já tem conta? <a href="{{ url_for('auth.login') }}">Faça login</a>
+</p>
 {% endblock %}

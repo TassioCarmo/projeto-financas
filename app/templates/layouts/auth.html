@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block body_class %}auth-body{% endblock %}
+
+{% block body %}
+<div class="auth-layout">
+    <header class="auth-header">
+        <a href="{{ url_for('auth.login') }}" class="auth-brand">
+            <div class="sidebar-brand-icon" aria-hidden="true">F</div>
+            Finanças
+        </a>
+        {% include "components/_theme_toggle.html" %}
+    </header>
+
+    <div class="auth-card">
+        {% include "components/_alert.html" %}
+        {% block content %}{% endblock %}
+    </div>
+</div>
+{% endblock %}
