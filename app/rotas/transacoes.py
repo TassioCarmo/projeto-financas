@@ -107,6 +107,8 @@ def listar():
     if erro:
         return erro
     transacoes = listar_por_usuario(usuario["id"])
+    # Recupera resultado da última importação (se houver) e remove da session
+    # para não reaparecer ao recarregar a página depois
     resultado_importacao = session.pop("ultima_importacao", None)
     return render_template(
         "transacoes/listar.html",
@@ -147,10 +149,12 @@ def criar():
 
 @transacoes_bp.route("/transacoes/importar", methods=["POST"])
 def importar():
+    # 1. Verificar login
     usuario, erro = _requer_login()
     if erro:
         return erro
 
+    # 2. Validar arquivo enviado
     arquivo = request.files.get("arquivo")
     if not arquivo or not arquivo.filename:
         flash("Selecione um arquivo para importar.", "erro")
@@ -161,9 +165,13 @@ def importar():
         flash("Formato não suportado. Use .csv ou .xlsx.", "erro")
         return redirect(url_for("transacoes.listar"))
 
+    # 3. Chamar serviço de importação
     resultado = importar_transacoes(usuario["id"], arquivo.stream, arquivo.filename)
+
+    # 4. Guardar resultado na session (para mostrar detalhes após redirect)
     session["ultima_importacao"] = resultado
 
+    # 5. Flash com resumo e redirect (padrão PRG — evita reenvio ao recarregar)
     importadas = resultado["importadas"]
     qtd_erros = len(resultado["erros"])
     if importadas == 0 and qtd_erros > 0:

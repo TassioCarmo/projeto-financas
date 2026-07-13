@@ -63,6 +63,7 @@
 </form>
 
 <h2>Importar planilha</h2>
+<!-- Upload de planilha: envia arquivo para POST /transacoes/importar -->
 <form method="POST" action="{{ url_for('transacoes.importar') }}" enctype="multipart/form-data">
     <label for="arquivo">Arquivo (.csv ou .xlsx)</label>
     <input type="file" id="arquivo" name="arquivo" accept=".xlsx,.csv" required>
@@ -75,6 +76,7 @@
 </p>
 
 {% if resultado_importacao %}
+<!-- Resumo da importação: preenchido via session após redirect -->
 <div class="importacao-resumo">
     <p>
         {{ resultado_importacao.importadas }} transação(ões) importada(s),

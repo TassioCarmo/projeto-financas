@@ -73,7 +73,7 @@ def test_fluxo_completo_auth(client):
         follow_redirects=False,
     )
     assert response.status_code == 302
-    assert response.headers["Location"].endswith("/perfil")
+    assert response.headers["Location"].endswith("/transacoes")
 
     response = client.get("/perfil")
     assert response.status_code == 200

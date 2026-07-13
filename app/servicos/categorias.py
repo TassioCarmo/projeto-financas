@@ -4,6 +4,11 @@ from app.servicos.db import get_connection
 
 
 def _normalizar_nome(nome: str) -> str:
+    """
+    Padroniza nome para comparação sem acento e em minúsculas.
+
+    Usado na importação para comparar "Alimentação" com "alimentacao".
+    """
     texto = nome.strip().lower()
     texto = unicodedata.normalize("NFKD", texto)
     return "".join(c for c in texto if not unicodedata.combining(c))
@@ -44,4 +49,9 @@ def categoria_ativa_existe(categoria_id: int) -> bool:
 
 
 def mapa_nome_para_id() -> dict[str, int]:
+    """
+    Retorna dicionário {nome_normalizado: id} para lookup na importação.
+
+    Ex.: {"alimentacao": 1, "transporte": 2, ...}
+    """
     return {_normalizar_nome(cat["nome"]): cat["id"] for cat in listar_ativas()}

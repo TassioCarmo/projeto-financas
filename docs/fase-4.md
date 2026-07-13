@@ -137,6 +137,54 @@ O teste de integração verifica:
 
 ---
 
+## Guia do código para iniciantes
+
+Se você está aprendendo, leia os arquivos nesta ordem:
+
+1. [`app/templates/transacoes/listar.html`](../app/templates/transacoes/listar.html) — formulário de upload na tela
+2. [`app/rotas/transacoes.py`](../app/rotas/transacoes.py) — rota `importar()` recebe o arquivo
+3. [`app/servicos/importacao.py`](../app/servicos/importacao.py) — lógica de leitura e validação
+
+### Fluxo simplificado
+
+```mermaid
+flowchart LR
+    browser["Browser\nformulário upload"] --> rota["transacoes.py\nPOST /importar"]
+    rota --> servico["importacao.py\nler + validar linhas"]
+    servico --> banco["PostgreSQL\ntransacoes"]
+    rota --> session["Session\nresultado temporário"]
+    session --> tela["listar.html\nresumo de erros"]
+```
+
+### Quem faz o quê
+
+| Arquivo | Responsabilidade |
+|---------|------------------|
+| `listar.html` | Mostra o formulário de upload e o resumo (importadas / erros) |
+| `rotas/transacoes.py` | Recebe o arquivo, chama o serviço, guarda resultado na session |
+| `servicos/importacao.py` | Lê CSV/XLSX, normaliza colunas, valida cada linha, salva no banco |
+| `servicos/categorias.py` | `mapa_nome_para_id()` — traduz "Alimentação" → id da categoria |
+| `servicos/transacoes.py` | `criar_transacao(origem='importacao')` — INSERT no Postgres |
+
+### Exemplo: uma linha da planilha
+
+Planilha:
+
+```
+data,descricao,categoria,valor
+2026-07-10,Supermercado,Alimentação,125.50
+```
+
+Passo a passo:
+
+1. **`ler_planilha`** — pandas lê o CSV em um DataFrame
+2. **`_mapear_colunas`** — confirma que existem data, descricao, categoria, valor
+3. **`_validar_linha`** — converte "125.50" → Decimal, "Alimentação" → categoria_id
+4. **`criar_transacao`** — INSERT com `origem='importacao'`
+5. Se a linha seguinte tiver erro (ex.: descrição vazia), entra em `erros[]` mas as anteriores já foram salvas
+
+---
+
 ## O que ficou de fora (propositalmente)
 
 - Perfis de importação (Fase 8)

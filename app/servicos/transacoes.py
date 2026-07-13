@@ -44,7 +44,7 @@ def criar_transacao(
     pago: bool,
     pago_por_terceiro: bool,
     nome_terceiro: str | None,
-    origem: str = "manual",
+    origem: str = "manual",  # "manual" = formulário; "importacao" = planilha
 ) -> dict:
     if origem not in ("manual", "importacao"):
         raise ValueError("Origem inválida.")

@@ -72,11 +72,19 @@ Resposta esperada (200):
 
 ```bash
 # Unitários (não exigem Postgres)
-pytest tests/test_health.py tests/test_auth.py
+pytest tests/test_health.py tests/test_auth.py tests/test_transacoes.py tests/test_importacao.py
 
 # Integração (exige docker compose up)
 pytest -m integration
 ```
+
+## Transações
+
+Após login, a tela principal fica em:
+
+- Transações: `http://localhost:5000/transacoes`
+
+Cadastro manual de gastos e importação de planilha (`.csv` ou `.xlsx`) estão na mesma tela. Veja o formato esperado em [Fase 4 — Upload de planilha](docs/fase-4.md).
 
 ## Autenticação
 
@@ -103,3 +111,5 @@ docs/            # Documentação por fase
 - [Fase 0 — Setup do Projeto](docs/fase-0.md)
 - [Fase 1 — Banco de dados mínimo](docs/fase-1.md)
 - [Fase 2 — Autenticação simples](docs/fase-2.md)
+- [Fase 3 — Cadastro manual de transação](docs/fase-3.md)
+- [Fase 4 — Upload de planilha](docs/fase-4.md)

@@ -74,7 +74,7 @@ def login():
         return render_template("auth/login.html", email=email)
 
     iniciar_sessao(usuario)
-    return redirect(url_for("perfil.exibir"))
+    return redirect(url_for("transacoes.listar"))
 
 
 @auth_bp.route("/logout", methods=["POST"])

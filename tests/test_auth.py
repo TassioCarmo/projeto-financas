@@ -114,7 +114,7 @@ def test_login_post_sucesso(mock_buscar, mock_verificar, client):
         follow_redirects=False,
     )
     assert response.status_code == 302
-    assert response.headers["Location"].endswith("/perfil")
+    assert response.headers["Location"].endswith("/transacoes")
 
 
 @patch("app.rotas.auth.buscar_por_email", return_value=None)

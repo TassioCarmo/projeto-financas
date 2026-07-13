@@ -6,6 +6,7 @@
 <h1>Perfil</h1>
 <p>Olá, <strong>{{ usuario.nome }}</strong>!</p>
 <p>Email: {{ usuario.email }}</p>
+<p class="links"><a href="{{ url_for('transacoes.listar') }}">Ver transações</a></p>
 <form method="POST" action="{{ url_for('auth.logout') }}">
     <button type="submit">Sair</button>
 </form>
