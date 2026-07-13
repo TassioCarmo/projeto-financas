@@ -72,7 +72,7 @@ Resposta esperada (200):
 
 ```bash
 # Unitários (não exigem Postgres)
-pytest tests/test_health.py tests/test_auth.py tests/test_transacoes.py tests/test_importacao.py
+pytest tests/test_health.py tests/test_auth.py tests/test_transacoes.py tests/test_importacao.py tests/test_resumo_mensal.py
 
 # Integração (exige docker compose up)
 pytest -m integration
@@ -85,6 +85,14 @@ Após login, a tela principal fica em:
 - Transações: `http://localhost:5000/transacoes`
 
 Cadastro manual de gastos e importação de planilha (`.csv` ou `.xlsx`) estão na mesma tela. Veja o formato esperado em [Fase 4 — Upload de planilha](docs/fase-4.md).
+
+## Resumo mensal
+
+Após login, acesse:
+
+- Resumo mensal: `http://localhost:5000/resumo-mensal?ano=2026`
+
+Registre renda, investimento, rendimentos e patrimônio mês a mês. Veja detalhes em [Fase 5 — Dados mensais](docs/fase-5.md).
 
 ## Autenticação
 
@@ -113,3 +121,4 @@ docs/            # Documentação por fase
 - [Fase 2 — Autenticação simples](docs/fase-2.md)
 - [Fase 3 — Cadastro manual de transação](docs/fase-3.md)
 - [Fase 4 — Upload de planilha](docs/fase-4.md)
+- [Fase 5 — Dados mensais (resumo_mensal)](docs/fase-5.md)

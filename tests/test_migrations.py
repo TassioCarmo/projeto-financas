@@ -63,7 +63,13 @@ def test_tables_exist(migrated_db):
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            for table in ("usuarios", "categorias", "transacoes", "schema_migrations"):
+            for table in (
+                "usuarios",
+                "categorias",
+                "transacoes",
+                "resumo_mensal",
+                "schema_migrations",
+            ):
                 assert _table_exists(cur, table), f"Tabela {table} não encontrada"
     finally:
         conn.close()
@@ -95,6 +101,24 @@ def test_transacoes_usuario_id_index(migrated_db):
     try:
         with conn.cursor() as cur:
             assert _index_exists(cur, "idx_transacoes_usuario_id")
+    finally:
+        conn.close()
+
+
+def test_resumo_mensal_foreign_key(migrated_db):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            assert _foreign_key_exists(cur, "resumo_mensal", "usuarios")
+    finally:
+        conn.close()
+
+
+def test_resumo_mensal_usuario_ano_index(migrated_db):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            assert _index_exists(cur, "idx_resumo_mensal_usuario_ano")
     finally:
         conn.close()
 
